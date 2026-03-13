@@ -17,4 +17,16 @@ export const authController = {
     const me = await userRepository.findById(req.user.id);
     res.json(me);
   }),
+
+  usersByRole: asyncHandler(async (req, res) => {
+    const role = req.query.role;
+    if (!role || typeof role !== "string") {
+      return res
+        .status(400)
+        .json({ message: "Query param 'role' is required" });
+    }
+
+    const users = await userRepository.findByRole(role);
+    res.json(users);
+  }),
 };

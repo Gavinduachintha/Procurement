@@ -5,6 +5,8 @@ import { authenticate } from "../middleware/auth.js";
 const router = Router();
 
 router.use(authenticate);
+router.post("/suppliers", procurementController.createSupplier);
+router.get("/suppliers", procurementController.listSuppliers);
 router.post("/requests/:requestId/start", procurementController.startJob);
 router.post("/jobs/:jobId/assign-clerk", procurementController.assignClerk);
 router.post(

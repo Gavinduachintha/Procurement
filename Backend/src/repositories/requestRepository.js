@@ -54,6 +54,18 @@ export const requestRepository = {
     return rows;
   },
 
+  async listAssignedForSpecificationChecker(checkerId) {
+    const { rows } = await query(
+      `SELECT *
+       FROM purchase_requests
+       WHERE specification_checker_id = $1
+         AND status IN ('SPEC_REVIEW_PENDING', 'SPEC_REWORK_REQUESTED')
+       ORDER BY updated_at DESC`,
+      [checkerId],
+    );
+    return rows;
+  },
+
   async findById(id) {
     const { rows } = await query(
       "SELECT * FROM purchase_requests WHERE id = $1",
@@ -108,6 +120,17 @@ export const requestRepository = {
       `SELECT * FROM purchase_requests
        WHERE status IN ('APPROVAL_PENDING', 'CLARIFICATION_REQUESTED')
        ORDER BY updated_at DESC`,
+    );
+    return rows;
+  },
+
+  async listApprovedWithoutJobs() {
+    const { rows } = await query(
+      `SELECT pr.*
+       FROM purchase_requests pr
+       LEFT JOIN jobs j ON j.purchase_request_id = pr.id
+       WHERE pr.status = 'APPROVED' AND j.id IS NULL
+       ORDER BY pr.updated_at DESC`,
     );
     return rows;
   },

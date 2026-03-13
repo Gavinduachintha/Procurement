@@ -11,6 +11,22 @@ import {
 import { notificationService } from "./notificationService.js";
 
 export const procurementService = {
+  async createSupplier(user, payload) {
+    if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
+      throw new ApiError(403, "Only supply branch can register suppliers");
+    }
+
+    return supplierRepository.create(payload);
+  },
+
+  async listSuppliers(user) {
+    if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
+      throw new ApiError(403, "Only supply branch can view all suppliers");
+    }
+
+    return supplierRepository.listAll();
+  },
+
   async chooseMethodAndCreateJob(user, requestId, procurementMethod) {
     if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
       throw new ApiError(

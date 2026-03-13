@@ -2,6 +2,19 @@ import { procurementService } from "../services/procurementService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const procurementController = {
+  createSupplier: asyncHandler(async (req, res) => {
+    const supplier = await procurementService.createSupplier(
+      req.user,
+      req.body,
+    );
+    res.status(201).json(supplier);
+  }),
+
+  listSuppliers: asyncHandler(async (req, res) => {
+    const suppliers = await procurementService.listSuppliers(req.user);
+    res.json(suppliers);
+  }),
+
   startJob: asyncHandler(async (req, res) => {
     const job = await procurementService.chooseMethodAndCreateJob(
       req.user,

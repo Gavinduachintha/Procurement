@@ -75,11 +75,19 @@ export const requestService = {
     return requestRepository.listByRequesterId(userId);
   },
 
+  async checkerAssignedRequests(checkerId) {
+    return requestRepository.listAssignedForSpecificationChecker(checkerId);
+  },
+
   async getRequest(requestId) {
     const request = await requestRepository.findById(requestId);
     if (!request) {
       throw new ApiError(404, "Request not found");
     }
     return request;
+  },
+
+  async approvedRequestsWithoutJobs() {
+    return requestRepository.listApprovedWithoutJobs();
   },
 };

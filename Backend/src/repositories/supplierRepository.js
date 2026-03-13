@@ -1,6 +1,25 @@
 import { query } from "../config/db.js";
 
 export const supplierRepository = {
+  async create({ name, email, category }) {
+    const { rows } = await query(
+      `INSERT INTO suppliers (name, email, category)
+       VALUES ($1, $2, $3)
+       RETURNING id, name, email, category, created_at`,
+      [name, email, category],
+    );
+    return rows[0];
+  },
+
+  async listAll() {
+    const { rows } = await query(
+      `SELECT id, name, email, category, created_at
+       FROM suppliers
+       ORDER BY created_at DESC`,
+    );
+    return rows;
+  },
+
   async listByCategory(category) {
     const { rows } = await query(
       `SELECT id, name, email, category, created_at
