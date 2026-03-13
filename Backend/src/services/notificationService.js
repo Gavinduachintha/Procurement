@@ -3,7 +3,9 @@ import { userRepository } from "../repositories/userRepository.js";
 
 export const notificationService = {
   async notifyByRoles(roles, payload) {
-    const usersByRole = await Promise.all(roles.map((role) => userRepository.findByRole(role)));
+    const usersByRole = await Promise.all(
+      roles.map((role) => userRepository.findByRole(role)),
+    );
     const userIds = [...new Set(usersByRole.flat().map((u) => u.id))];
     return notificationRepository.createMany(userIds, payload);
   },

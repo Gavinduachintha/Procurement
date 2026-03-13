@@ -9,7 +9,9 @@ export const notificationRepository = {
 
     userIds.forEach((userId, index) => {
       const base = index * 4;
-      placeholders.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`);
+      placeholders.push(
+        `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`,
+      );
       values.push(userId, payload.eventType, payload.subject, payload.message);
     });
 

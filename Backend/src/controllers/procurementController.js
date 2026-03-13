@@ -48,7 +48,9 @@ export const procurementController = {
   }),
 
   schedule: asyncHandler(async (req, res) => {
-    const schedule = await procurementService.getProcurementSchedule(Number(req.params.jobId));
+    const schedule = await procurementService.getProcurementSchedule(
+      Number(req.params.jobId),
+    );
     res.json(schedule);
   }),
 };

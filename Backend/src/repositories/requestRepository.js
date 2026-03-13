@@ -55,12 +55,18 @@ export const requestRepository = {
   },
 
   async findById(id) {
-    const { rows } = await query("SELECT * FROM purchase_requests WHERE id = $1", [id]);
+    const { rows } = await query(
+      "SELECT * FROM purchase_requests WHERE id = $1",
+      [id],
+    );
     return rows[0] || null;
   },
 
   async findByRequestNumber(requestId) {
-    const { rows } = await query("SELECT * FROM purchase_requests WHERE request_id = $1", [requestId]);
+    const { rows } = await query(
+      "SELECT * FROM purchase_requests WHERE request_id = $1",
+      [requestId],
+    );
     return rows[0] || null;
   },
 

@@ -12,7 +12,9 @@ export const userRepository = {
   },
 
   async findByEmail(email) {
-    const { rows } = await query("SELECT * FROM users WHERE email = $1", [email.toLowerCase()]);
+    const { rows } = await query("SELECT * FROM users WHERE email = $1", [
+      email.toLowerCase(),
+    ]);
     return rows[0] || null;
   },
 

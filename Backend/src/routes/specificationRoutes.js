@@ -6,6 +6,9 @@ const router = Router();
 
 router.use(authenticate);
 router.post("/:requestId/review", specificationController.review);
-router.post("/:requestId/requester-confirmation", specificationController.requesterConfirm);
+router.post(
+  "/:requestId/requester-confirmation",
+  specificationController.requesterConfirm,
+);
 
 export default router;

@@ -3,13 +3,20 @@ import { requestRepository } from "../repositories/requestRepository.js";
 import { supplierRepository } from "../repositories/supplierRepository.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { ApiError } from "../utils/apiError.js";
-import { PROCUREMENT_METHODS, REQUEST_STATUS, USER_ROLES } from "../utils/constants.js";
+import {
+  PROCUREMENT_METHODS,
+  REQUEST_STATUS,
+  USER_ROLES,
+} from "../utils/constants.js";
 import { notificationService } from "./notificationService.js";
 
 export const procurementService = {
   async chooseMethodAndCreateJob(user, requestId, procurementMethod) {
     if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
-      throw new ApiError(403, "Only supply branch users can choose procurement method");
+      throw new ApiError(
+        403,
+        "Only supply branch users can choose procurement method",
+      );
     }
 
     if (!PROCUREMENT_METHODS.includes(procurementMethod)) {
@@ -35,7 +42,10 @@ export const procurementService = {
       procurementMethod,
     });
 
-    await requestRepository.updateStatus(request.id, REQUEST_STATUS.PROCUREMENT_STARTED);
+    await requestRepository.updateStatus(
+      request.id,
+      REQUEST_STATUS.PROCUREMENT_STARTED,
+    );
 
     await notificationService.notifyUsers([request.requester_id], {
       eventType: "JOB_NUMBER_GENERATED",
@@ -70,11 +80,19 @@ export const procurementService = {
       throw new ApiError(404, "Job not found");
     }
 
-    if (![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)) {
-      throw new ApiError(403, "Only subject clerk or supply branch can select supplier category");
+    if (
+      ![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)
+    ) {
+      throw new ApiError(
+        403,
+        "Only subject clerk or supply branch can select supplier category",
+      );
     }
 
-    if (user.role === USER_ROLES.SUBJECT_CLERK && job.assigned_clerk_id !== user.id) {
+    if (
+      user.role === USER_ROLES.SUBJECT_CLERK &&
+      job.assigned_clerk_id !== user.id
+    ) {
       throw new ApiError(403, "You are not assigned to this job");
     }
 
@@ -88,11 +106,19 @@ export const procurementService = {
       throw new ApiError(404, "Job not found");
     }
 
-    if (![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)) {
-      throw new ApiError(403, "Only subject clerk or supply branch can select suppliers");
+    if (
+      ![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)
+    ) {
+      throw new ApiError(
+        403,
+        "Only subject clerk or supply branch can select suppliers",
+      );
     }
 
-    if (user.role === USER_ROLES.SUBJECT_CLERK && job.assigned_clerk_id !== user.id) {
+    if (
+      user.role === USER_ROLES.SUBJECT_CLERK &&
+      job.assigned_clerk_id !== user.id
+    ) {
       throw new ApiError(403, "You are not assigned to this job");
     }
 
@@ -105,11 +131,19 @@ export const procurementService = {
       throw new ApiError(404, "Job not found");
     }
 
-    if (![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)) {
-      throw new ApiError(403, "Only subject clerk or supply branch can generate quotation letters");
+    if (
+      ![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)
+    ) {
+      throw new ApiError(
+        403,
+        "Only subject clerk or supply branch can generate quotation letters",
+      );
     }
 
-    if (user.role === USER_ROLES.SUBJECT_CLERK && job.assigned_clerk_id !== user.id) {
+    if (
+      user.role === USER_ROLES.SUBJECT_CLERK &&
+      job.assigned_clerk_id !== user.id
+    ) {
       throw new ApiError(403, "You are not assigned to this job");
     }
 

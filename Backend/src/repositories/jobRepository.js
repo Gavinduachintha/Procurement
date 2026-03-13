@@ -8,7 +8,9 @@ export const jobRepository = {
       await client.query("BEGIN");
       const year = new Date().getFullYear();
       const lockKey = `${procurementMethod}-${year}`;
-      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+        lockKey,
+      ]);
 
       const nextSerialResult = await client.query(
         `SELECT COALESCE(MAX(serial_number), 0) + 1 AS next_serial
@@ -17,7 +19,11 @@ export const jobRepository = {
         [procurementMethod, year],
       );
       const serial = Number(nextSerialResult.rows[0].next_serial);
-      const jobNumber = buildJobNumber({ method: procurementMethod, year, serial });
+      const jobNumber = buildJobNumber({
+        method: procurementMethod,
+        year,
+        serial,
+      });
 
       const insertResult = await client.query(
         `INSERT INTO jobs (purchase_request_id, procurement_method, year, serial_number, job_number)
@@ -42,7 +48,10 @@ export const jobRepository = {
   },
 
   async findByRequestId(purchaseRequestId) {
-    const { rows } = await query("SELECT * FROM jobs WHERE purchase_request_id = $1", [purchaseRequestId]);
+    const { rows } = await query(
+      "SELECT * FROM jobs WHERE purchase_request_id = $1",
+      [purchaseRequestId],
+    );
     return rows[0] || null;
   },
 

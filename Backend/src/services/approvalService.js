@@ -15,12 +15,19 @@ export const approvalService = {
       throw new ApiError(404, "Request not found");
     }
 
-    if (![REQUEST_STATUS.APPROVAL_PENDING, REQUEST_STATUS.CLARIFICATION_REQUESTED].includes(request.status)) {
+    if (
+      ![
+        REQUEST_STATUS.APPROVAL_PENDING,
+        REQUEST_STATUS.CLARIFICATION_REQUESTED,
+      ].includes(request.status)
+    ) {
       throw new ApiError(400, "Request is not in approval state");
     }
 
     const decision = payload.decision;
-    if (!["APPROVED", "REJECTED", "CLARIFICATION_REQUESTED"].includes(decision)) {
+    if (
+      !["APPROVED", "REJECTED", "CLARIFICATION_REQUESTED"].includes(decision)
+    ) {
       throw new ApiError(400, "Invalid decision");
     }
 
@@ -47,7 +54,10 @@ export const approvalService = {
       nextStatus = REQUEST_STATUS.APPROVED;
     }
 
-    const updatedRequest = await requestRepository.updateStatus(request.id, nextStatus);
+    const updatedRequest = await requestRepository.updateStatus(
+      request.id,
+      nextStatus,
+    );
 
     await notificationService.notifyUsers([request.requester_id], {
       eventType: "APPROVAL_UPDATED",

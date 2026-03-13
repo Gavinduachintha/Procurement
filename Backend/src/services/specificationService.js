@@ -6,8 +6,15 @@ import { notificationService } from "./notificationService.js";
 
 export const specificationService = {
   async reviewSpecification(user, requestId, payload) {
-    if (![USER_ROLES.DIRECTOR_ICT, USER_ROLES.MAINTENANCE_ENGINEER].includes(user.role)) {
-      throw new ApiError(403, "Only specification checking officers can review specifications");
+    if (
+      ![USER_ROLES.DIRECTOR_ICT, USER_ROLES.MAINTENANCE_ENGINEER].includes(
+        user.role,
+      )
+    ) {
+      throw new ApiError(
+        403,
+        "Only specification checking officers can review specifications",
+      );
     }
 
     const request = await requestRepository.findById(requestId);
@@ -16,10 +23,18 @@ export const specificationService = {
     }
 
     if (request.specification_checker_id !== user.id) {
-      throw new ApiError(403, "You are not assigned as the specification checker for this request");
+      throw new ApiError(
+        403,
+        "You are not assigned as the specification checker for this request",
+      );
     }
 
-    if (![REQUEST_STATUS.SPEC_REVIEW_PENDING, REQUEST_STATUS.SPEC_REWORK_REQUESTED].includes(request.status)) {
+    if (
+      ![
+        REQUEST_STATUS.SPEC_REVIEW_PENDING,
+        REQUEST_STATUS.SPEC_REWORK_REQUESTED,
+      ].includes(request.status)
+    ) {
       throw new ApiError(400, "Request is not in a specification review state");
     }
 
@@ -48,7 +63,10 @@ export const specificationService = {
 
   async requesterConfirmation(user, requestId, payload) {
     if (user.role !== USER_ROLES.REQUESTING_OFFICER) {
-      throw new ApiError(403, "Only requesting officers can confirm reviewed specifications");
+      throw new ApiError(
+        403,
+        "Only requesting officers can confirm reviewed specifications",
+      );
     }
 
     const request = await requestRepository.findById(requestId);
@@ -61,12 +79,18 @@ export const specificationService = {
     }
 
     if (request.status !== REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER) {
-      throw new ApiError(400, "Request is not waiting for requester confirmation");
+      throw new ApiError(
+        400,
+        "Request is not waiting for requester confirmation",
+      );
     }
 
     const action = payload.action;
     if (action === "ACCEPT") {
-      const updated = await requestRepository.updateStatus(request.id, REQUEST_STATUS.APPROVAL_PENDING);
+      const updated = await requestRepository.updateStatus(
+        request.id,
+        REQUEST_STATUS.APPROVAL_PENDING,
+      );
 
       await notificationService.notifyUsers([request.requester_id], {
         eventType: "SPEC_CONFIRMED",
@@ -78,17 +102,26 @@ export const specificationService = {
     }
 
     if (action === "REQUEST_MODIFICATION") {
-      const updated = await requestRepository.updateStatus(request.id, REQUEST_STATUS.SPEC_REWORK_REQUESTED);
+      const updated = await requestRepository.updateStatus(
+        request.id,
+        REQUEST_STATUS.SPEC_REWORK_REQUESTED,
+      );
 
-      await notificationService.notifyUsers([request.specification_checker_id], {
-        eventType: "SPEC_REWORK_REQUESTED",
-        subject: `Specification rework requested (${request.request_id})`,
-        message: `Requesting officer requested changes for ${request.request_id}.`,
-      });
+      await notificationService.notifyUsers(
+        [request.specification_checker_id],
+        {
+          eventType: "SPEC_REWORK_REQUESTED",
+          subject: `Specification rework requested (${request.request_id})`,
+          message: `Requesting officer requested changes for ${request.request_id}.`,
+        },
+      );
 
       return updated;
     }
 
-    throw new ApiError(400, "Invalid action. Use ACCEPT or REQUEST_MODIFICATION");
+    throw new ApiError(
+      400,
+      "Invalid action. Use ACCEPT or REQUEST_MODIFICATION",
+    );
   },
 };

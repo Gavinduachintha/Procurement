@@ -1,13 +1,25 @@
 import { query } from "../config/db.js";
 
 export const specificationRepository = {
-  async createReview({ purchaseRequestId, checkerId, reviewedSpecifications, reviewNotes, decision }) {
+  async createReview({
+    purchaseRequestId,
+    checkerId,
+    reviewedSpecifications,
+    reviewNotes,
+    decision,
+  }) {
     const { rows } = await query(
       `INSERT INTO specification_reviews (
           purchase_request_id, checker_id, reviewed_specifications, review_notes, decision
        ) VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [purchaseRequestId, checkerId, reviewedSpecifications, reviewNotes || null, decision],
+      [
+        purchaseRequestId,
+        checkerId,
+        reviewedSpecifications,
+        reviewNotes || null,
+        decision,
+      ],
     );
     return rows[0];
   },
