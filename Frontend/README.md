@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# Frontend Developer Guide
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Stack
 
-Currently, two official plugins are available:
+- React 19
+- TypeScript
+- Vite
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Scripts
 
-## React Compiler
+- `npm run dev` -> local development
+- `npm run build` -> production build (`tsc -b && vite build`)
+- `npm run preview` -> preview built app
+- `npm run lint` -> lint checks
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Environment Variable
 
-## Expanding the ESLint configuration
+- `VITE_API_BASE_URL`
+  - default: `http://localhost:3000/api`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Defined in `src/config/constants.ts`.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Application Structure
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `src/context/AuthContext.tsx`
+  - token/user state
+  - login, register, logout functions
+  - token persistence via `localStorage` (`procurement_token`)
+- `src/api/*`
+  - typed backend API wrappers
+- `src/features/*`
+  - role-based UI modules
+- `src/types/models.ts`
+  - shared model types used across APIs/components
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Role-Based UI Routing
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Main switching logic is in `src/features/common/RoleWorkspace.tsx`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `REQUESTING_OFFICER` -> `RequesterDashboard`
+- `DIRECTOR_ICT`, `MAINTENANCE_ENGINEER` -> `CheckerDashboard`
+- `DEAN`, `REGISTRAR`, `BURSAR`, `VICE_CHANCELLOR` -> `ApproverDashboard`
+- `SUPPLY_BRANCH` -> `SupplyBranchDashboard`
+- `SUBJECT_CLERK` -> `SubjectClerkDashboard`
+- all authenticated users -> `NotificationsPanel`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## API Integration Pattern
+
+All calls use `apiRequest()` in `src/api/client.ts`.
+
+Behavior:
+
+1. Prefixes route with `API_BASE_URL`
+2. Adds JSON headers
+3. Adds bearer token when provided
+4. Throws `ApiClientError(status, message)` for non-2xx responses
+
+## Important Feature Notes
+
+### Requester flow
+
+`RequesterDashboard.tsx` supports:
+
+- request creation
+- status summary
+- requester confirmation for specification review (`ACCEPT` / `REQUEST_MODIFICATION`)
+
+### Checker flow
+
+`CheckerDashboard.tsx` supports:
+
+- list assigned requests
+- submit reviewed specification
+
+### Approver flow
+
+`ApproverDashboard.tsx` supports:
+
+- list pending approvals
+- decisions: `APPROVED`, `REJECTED`, `CLARIFICATION_REQUESTED`
+
+### Supply branch flow
+
+`SupplyBranchDashboard.tsx` supports:
+
+- start procurement job from approved request
+- assign clerk
+- register suppliers
+- view job table
+
+### Subject clerk flow
+
+`SubjectClerkDashboard.tsx` supports:
+
+- show assigned jobs
+- choose supplier category
+- attach suppliers
+- generate quotation letters
+- view simplified schedule preview
+
+## Adding a New Frontend Feature
+
+Recommended order:
+
+1. Create/update API wrapper under `src/api`
+2. Extend model types in `src/types/models.ts`
+3. Build role-specific feature component in `src/features`
+4. Connect in `RoleWorkspace.tsx` (if role visible)
+5. Add any needed constants in `src/config/constants.ts`
+
+## Integration Contract
+
+For exact backend request/response contracts, use:
+
+- [../docs/api-reference.md](../docs/api-reference.md)
+
+For backend business rules and status transitions, use:
+
+- [../Backend/README.md](../Backend/README.md)
