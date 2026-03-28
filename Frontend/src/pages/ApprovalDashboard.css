@@ -1,0 +1,88 @@
+.approval-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.page-header p {
+  margin: 0.5rem 0 0 0;
+  color: #7f8c8d;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #7f8c8d;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+  color: #7f8c8d;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.approval-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.request-summary {
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.request-summary > div {
+  line-height: 1.5;
+}
+
+.request-summary strong {
+  color: #2c3e50;
+}
+
+.request-summary p {
+  margin: 0.5rem 0 0 0;
+  color: #34495e;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons .btn {
+    width: 100%;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .btn {
+    width: 100%;
+  }
+}

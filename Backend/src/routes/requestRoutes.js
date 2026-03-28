@@ -8,6 +8,7 @@ router.use(authenticate);
 router.post("/", requestController.create);
 router.get("/mine", requestController.mine);
 router.get("/assigned/specification", requestController.assignedForChecker);
+router.get("/assigned/specifications", requestController.assignedForChecker);
 router.get("/approved/without-jobs", requestController.approvedWithoutJobs);
 router.get("/:id", requestController.getById);
 

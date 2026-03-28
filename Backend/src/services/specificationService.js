@@ -7,9 +7,11 @@ import { notificationService } from "./notificationService.js";
 export const specificationService = {
   async reviewSpecification(user, requestId, payload) {
     if (
-      ![USER_ROLES.DIRECTOR_ICT, USER_ROLES.MAINTENANCE_ENGINEER].includes(
-        user.role,
-      )
+      ![
+        USER_ROLES.DIRECTOR_ICT,
+        USER_ROLES.MAINTENANCE_ENGINEER,
+        USER_ROLES.SPECIFICATION_CHECKER,
+      ].includes(user.role)
     ) {
       throw new ApiError(
         403,

@@ -16,8 +16,44 @@ export const requestService = {
       throw new ApiError(403, "Only requesting officers can submit requests");
     }
 
+    const rawItemType = payload.itemType ?? payload.item_type;
+    const normalizedItemType = String(rawItemType || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_");
+
+    if (!["IT", "NON_IT"].includes(normalizedItemType)) {
+      throw new ApiError(400, "Invalid item type. Use IT or NON_IT");
+    }
+
+    const checkerRole =
+      normalizedItemType === "IT"
+        ? USER_ROLES.DIRECTOR_ICT
+        : USER_ROLES.MAINTENANCE_ENGINEER;
+
+    let checkers = await userRepository.findByRole(checkerRole);
+    if (!checkers.length) {
+      checkers = await userRepository.findByRole(
+        USER_ROLES.SPECIFICATION_CHECKER,
+      );
+    }
+
+    if (!checkers.length) {
+      throw new ApiError(
+        400,
+        `No available specification checker for role ${checkerRole}`,
+      );
+    }
+
+    const approvers = (
+      await Promise.all(
+        APPROVER_ROLES.map((role) => userRepository.findByRole(role)),
+      )
+    ).flat();
+
     const created = await requestRepository.create({
       ...payload,
+      itemType: normalizedItemType,
       requesterId: user.id,
       status: REQUEST_STATUS.SUBMITTED,
       department: payload.department || user.department || "General",
@@ -30,29 +66,12 @@ export const requestService = {
       requestNumber,
     );
 
-    const checkerRole =
-      payload.itemType === "IT"
-        ? USER_ROLES.DIRECTOR_ICT
-        : USER_ROLES.MAINTENANCE_ENGINEER;
-    const checkers = await userRepository.findByRole(checkerRole);
-    if (!checkers.length) {
-      throw new ApiError(
-        400,
-        `No available specification checker for role ${checkerRole}`,
-      );
-    }
-
     const assigned = await requestRepository.assignSpecificationChecker(
       saved.id,
       checkers[0].id,
       REQUEST_STATUS.SPEC_REVIEW_PENDING,
     );
 
-    const approvers = (
-      await Promise.all(
-        APPROVER_ROLES.map((role) => userRepository.findByRole(role)),
-      )
-    ).flat();
     await approvalRepository.ensureApprovalSlots(assigned.id, approvers);
 
     await notificationService.notifyUsers(

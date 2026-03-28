@@ -1,0 +1,58 @@
+Procurement System - Manual Registration Users
+Generated: 2026-03-19
+
+Use these for manual registration in the app.
+
+1) Full Name: Rohan Requester
+   Email: rohan.requester@univ.edu
+   Password: Req@12345
+   Role: REQUESTING_OFFICER
+   Department: Computer Science
+
+2) Full Name: Diana ICT
+   Email: diana.ict@univ.edu
+   Password: Ict@12345
+   Role: DIRECTOR_ICT
+   Department: ICT Center
+
+3) Full Name: Malik Maintenance
+   Email: malik.maintenance@univ.edu
+   Password: Maint@12345
+   Role: MAINTENANCE_ENGINEER
+   Department: Maintenance
+
+4) Full Name: Asha Dean
+   Email: asha.dean@univ.edu
+   Password: Dean@12345
+   Role: DEAN
+   Department: Administration
+
+5) Full Name: Ravi Registrar
+   Email: ravi.registrar@univ.edu
+   Password: Reg@12345
+   Role: REGISTRAR
+   Department: Administration
+
+6) Full Name: Bela Bursar
+   Email: bela.bursar@univ.edu
+   Password: Bur@12345
+   Role: BURSAR
+   Department: Finance
+
+7) Full Name: Victor Chancellor
+   Email: victor.vc@univ.edu
+   Password: Vc@12345
+   Role: VICE_CHANCELLOR
+   Department: Administration
+
+8) Full Name: Sahan Supply
+   Email: sahan.supply@univ.edu
+   Password: Supply@12345
+   Role: SUPPLY_BRANCH
+   Department: Supply Branch
+
+9) Full Name: Clara Clerk
+   Email: clara.clerk@univ.edu
+   Password: Clerk@12345
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
