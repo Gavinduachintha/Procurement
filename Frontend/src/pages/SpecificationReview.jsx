@@ -1,61 +1,63 @@
-import { useState, useEffect } from 'react'
-import { specificationApi } from '../api/endpoints'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import TextArea from '../components/TextArea'
-import Alert from '../components/Alert'
-import Modal from '../components/Modal'
-import './SpecificationReview.css'
+import { useState, useEffect } from "react";
+import { specificationApi } from "../api/endpoints";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import TextArea from "../components/TextArea";
+import Alert from "../components/Alert";
+import Modal from "../components/Modal";
+import "./SpecificationReview.css";
 
 export default function SpecificationReview({ user }) {
-  const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [selectedRequest, setSelectedRequest] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [reviewNotes, setReviewNotes] = useState('')
-  const [actionLoading, setActionLoading] = useState(false)
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadReviews()
-  }, [])
+    loadReviews();
+  }, []);
 
   const loadReviews = async () => {
     try {
-      const response = await specificationApi.listReviews({ status: 'SPEC_CHECKING' })
-      setRequests(response.data)
+      const response = await specificationApi.listReviews({
+        status: "SPEC_CHECKING",
+      });
+      setRequests(response.data);
     } catch (err) {
-      setError('Failed to load specification reviews')
+      setError("Failed to load specification reviews");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleReviewClick = (request) => {
-    setSelectedRequest(request)
-    setReviewNotes('')
-    setIsModalOpen(true)
-  }
+    setSelectedRequest(request);
+    setReviewNotes("");
+    setIsModalOpen(true);
+  };
 
   const handleSubmitReview = async () => {
-    if (!selectedRequest) return
+    if (!selectedRequest) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
       await specificationApi.review(selectedRequest.id, {
-        notes: reviewNotes
-      })
-      setIsModalOpen(false)
-      loadReviews()
-      setSelectedRequest(null)
+        notes: reviewNotes,
+      });
+      setIsModalOpen(false);
+      loadReviews();
+      setSelectedRequest(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit review')
+      setError(err.response?.data?.message || "Failed to submit review");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
-  if (loading) return <div className="loading-state">Loading reviews...</div>
+  if (loading) return <div className="loading-state">Loading reviews...</div>;
 
   return (
     <div className="spec-review">
@@ -90,10 +92,7 @@ export default function SpecificationReview({ user }) {
                   <td>{req.department}</td>
                   <td>{req.requested_by_name}</td>
                   <td>
-                    <Button
-                      size="sm"
-                      onClick={() => handleReviewClick(req)}
-                    >
+                    <Button size="sm" onClick={() => handleReviewClick(req)}>
                       Review
                     </Button>
                   </td>
@@ -127,7 +126,8 @@ export default function SpecificationReview({ user }) {
                 <strong>Quantity:</strong> {selectedRequest.quantity}
               </div>
               <div>
-                <strong>Estimated Cost:</strong> ${selectedRequest.estimated_cost}
+                <strong>Estimated Cost:</strong> $
+                {selectedRequest.estimated_cost}
               </div>
             </div>
 
@@ -144,12 +144,9 @@ export default function SpecificationReview({ user }) {
                 onClick={handleSubmitReview}
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Submitting...' : 'Approve Specifications'}
+                {actionLoading ? "Submitting..." : "Approve Specifications"}
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setIsModalOpen(false)}
-              >
+              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
             </div>
@@ -157,5 +154,5 @@ export default function SpecificationReview({ user }) {
         )}
       </Modal>
     </div>
-  )
+  );
 }

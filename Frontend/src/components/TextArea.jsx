@@ -1,4 +1,4 @@
-import './components.css'
+import "./components.css";
 
 export default function TextArea({ label, error, ...props }) {
   return (
@@ -7,5 +7,5 @@ export default function TextArea({ label, error, ...props }) {
       <textarea {...props} />
       {error && <span className="error">{error}</span>}
     </div>
-  )
+  );
 }

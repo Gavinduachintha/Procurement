@@ -1,16 +1,16 @@
-import { Outlet, useNavigate } from 'react-router-dom'
-import Navigation from './Navigation'
-import './Layout.css'
+import { Outlet, useNavigate } from "react-router-dom";
+import Navigation from "./Navigation";
+import "./Layout.css";
 
 export default function Layout({ user, setUser }) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setUser(null)
-    navigate('/login')
-  }
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUser(null);
+    navigate("/login");
+  };
 
   return (
     <div className="layout">
@@ -19,5 +19,5 @@ export default function Layout({ user, setUser }) {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

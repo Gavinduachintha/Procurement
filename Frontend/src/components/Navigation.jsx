@@ -1,45 +1,70 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, LogOut, Home, FileText, CheckCircle, ClipboardList, Briefcase } from 'lucide-react'
-import { useState } from 'react'
-import './Navigation.css'
+import { Link, useLocation } from "react-router-dom";
+import {
+  Menu,
+  LogOut,
+  Home,
+  FileText,
+  CheckCircle,
+  ClipboardList,
+  Briefcase,
+} from "lucide-react";
+import { useState } from "react";
+import "./Navigation.css";
 
 export default function Navigation({ user, onLogout }) {
-  const location = useLocation()
-  const [isOpen, setIsOpen] = useState(false)
+  const location = useLocation();
+  const [isOpen, setIsOpen] = useState(false);
 
   const getRoleBasedLinks = () => {
     const links = [
-      { to: '/dashboard', label: 'Dashboard', icon: Home, show: true }
-    ]
+      { to: "/dashboard", label: "Dashboard", icon: Home, show: true },
+    ];
 
-    if (user?.role === 'REQUESTING_OFFICER') {
-      links.push(
-        { to: '/request/new', label: 'Submit Request', icon: FileText, show: true }
-      )
+    if (user?.role === "REQUESTING_OFFICER") {
+      links.push({
+        to: "/request/new",
+        label: "Submit Request",
+        icon: FileText,
+        show: true,
+      });
     }
 
-    if (user?.role === 'DIRECTOR_ICT' || user?.role === 'MAINTENANCE_ENGINEER') {
-      links.push(
-        { to: '/specification-review', label: 'Spec Review', icon: CheckCircle, show: true }
-      )
+    if (
+      user?.role === "DIRECTOR_ICT" ||
+      user?.role === "MAINTENANCE_ENGINEER"
+    ) {
+      links.push({
+        to: "/specification-review",
+        label: "Spec Review",
+        icon: CheckCircle,
+        show: true,
+      });
     }
 
-    if (['DEAN', 'REGISTRAR', 'BURSAR', 'VICE_CHANCELLOR'].includes(user?.role)) {
-      links.push(
-        { to: '/approvals', label: 'Approvals', icon: ClipboardList, show: true }
-      )
+    if (
+      ["DEAN", "REGISTRAR", "BURSAR", "VICE_CHANCELLOR"].includes(user?.role)
+    ) {
+      links.push({
+        to: "/approvals",
+        label: "Approvals",
+        icon: ClipboardList,
+        show: true,
+      });
     }
 
-    if (user?.role === 'SUPPLY_BRANCH' || user?.role === 'SUBJECT_CLERK') {
-      links.push(
-        { to: '/supply-branch', label: 'Procurement', icon: Briefcase, show: true }
-      )
+    if (user?.role === "SUPPLY_BRANCH" || user?.role === "SUBJECT_CLERK") {
+      links.push({
+        to: "/supply-branch",
+        label: "Procurement",
+        icon: Briefcase,
+        show: true,
+      });
     }
 
-    return links
-  }
+    return links;
+  };
 
-  const links = getRoleBasedLinks()
+  const links = getRoleBasedLinks();
 
   return (
     <nav className="navbar">
@@ -53,21 +78,21 @@ export default function Navigation({ user, onLogout }) {
           <Menu size={24} />
         </button>
 
-        <div className={`nav-menu ${isOpen ? 'open' : ''}`}>
+        <div className={`nav-menu ${isOpen ? "open" : ""}`}>
           <div className="nav-links">
             {links.map((link) => {
-              const Icon = link.icon
+              const Icon = link.icon;
               return (
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`nav-link ${location.pathname === link.to ? 'active' : ''}`}
+                  className={`nav-link ${location.pathname === link.to ? "active" : ""}`}
                   onClick={() => setIsOpen(false)}
                 >
                   <Icon size={18} />
                   {link.label}
                 </Link>
-              )
+              );
             })}
           </div>
 
@@ -84,5 +109,5 @@ export default function Navigation({ user, onLogout }) {
         </div>
       </div>
     </nav>
-  )
+  );
 }

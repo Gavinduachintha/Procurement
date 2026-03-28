@@ -1,67 +1,67 @@
-import { useState, useEffect } from 'react'
-import { approvalApi } from '../api/endpoints'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import TextArea from '../components/TextArea'
-import Alert from '../components/Alert'
-import Modal from '../components/Modal'
-import './ApprovalDashboard.css'
+import { useState, useEffect } from "react";
+import { approvalApi } from "../api/endpoints";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import TextArea from "../components/TextArea";
+import Alert from "../components/Alert";
+import Modal from "../components/Modal";
+import "./ApprovalDashboard.css";
 
 export default function ApprovalDashboard({ user }) {
-  const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [selectedRequest, setSelectedRequest] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [notes, setNotes] = useState('')
-  const [actionLoading, setActionLoading] = useState(false)
-  const [action, setAction] = useState('approve')
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [action, setAction] = useState("approve");
 
   useEffect(() => {
-    loadPendingApprovals()
-  }, [])
+    loadPendingApprovals();
+  }, []);
 
   const loadPendingApprovals = async () => {
     try {
-      const response = await approvalApi.listPending()
-      setRequests(response.data)
+      const response = await approvalApi.listPending();
+      setRequests(response.data);
     } catch (err) {
-      setError('Failed to load approvals')
+      setError("Failed to load approvals");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleApprovalClick = (request, approvalAction) => {
-    setSelectedRequest(request)
-    setAction(approvalAction)
-    setNotes('')
-    setIsModalOpen(true)
-  }
+    setSelectedRequest(request);
+    setAction(approvalAction);
+    setNotes("");
+    setIsModalOpen(true);
+  };
 
   const handleSubmitApproval = async () => {
-    if (!selectedRequest) return
+    if (!selectedRequest) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      if (action === 'approve') {
-        await approvalApi.approve(selectedRequest.id, { notes })
-      } else if (action === 'reject') {
-        await approvalApi.reject(selectedRequest.id, { notes })
-      } else if (action === 'clarification') {
-        await approvalApi.requestClarification(selectedRequest.id, { notes })
+      if (action === "approve") {
+        await approvalApi.approve(selectedRequest.id, { notes });
+      } else if (action === "reject") {
+        await approvalApi.reject(selectedRequest.id, { notes });
+      } else if (action === "clarification") {
+        await approvalApi.requestClarification(selectedRequest.id, { notes });
       }
-      setIsModalOpen(false)
-      loadPendingApprovals()
-      setSelectedRequest(null)
+      setIsModalOpen(false);
+      loadPendingApprovals();
+      setSelectedRequest(null);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit approval')
+      setError(err.response?.data?.message || "Failed to submit approval");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
-  if (loading) return <div className="loading-state">Loading approvals...</div>
+  if (loading) return <div className="loading-state">Loading approvals...</div>;
 
   return (
     <div className="approval-dashboard">
@@ -102,21 +102,23 @@ export default function ApprovalDashboard({ user }) {
                       <Button
                         size="sm"
                         variant="success"
-                        onClick={() => handleApprovalClick(req, 'approve')}
+                        onClick={() => handleApprovalClick(req, "approve")}
                       >
                         Approve
                       </Button>
                       <Button
                         size="sm"
                         variant="danger"
-                        onClick={() => handleApprovalClick(req, 'reject')}
+                        onClick={() => handleApprovalClick(req, "reject")}
                       >
                         Reject
                       </Button>
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => handleApprovalClick(req, 'clarification')}
+                        onClick={() =>
+                          handleApprovalClick(req, "clarification")
+                        }
                       >
                         Clarify
                       </Button>
@@ -167,16 +169,19 @@ export default function ApprovalDashboard({ user }) {
 
             <div className="modal-actions">
               <Button
-                variant={action === 'approve' ? 'success' : action === 'reject' ? 'danger' : 'secondary'}
+                variant={
+                  action === "approve"
+                    ? "success"
+                    : action === "reject"
+                      ? "danger"
+                      : "secondary"
+                }
                 onClick={handleSubmitApproval}
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Processing...' : 'Confirm'}
+                {actionLoading ? "Processing..." : "Confirm"}
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => setIsModalOpen(false)}
-              >
+              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
             </div>
@@ -184,5 +189,5 @@ export default function ApprovalDashboard({ user }) {
         )}
       </Modal>
     </div>
-  )
+  );
 }

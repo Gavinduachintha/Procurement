@@ -15,11 +15,13 @@ React + Vite frontend for the University Procurement System.
 ## Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Create a `.env.local` file:
+
 ```
 VITE_API_BASE_URL=http://localhost:3000/api
 ```
@@ -27,6 +29,7 @@ VITE_API_BASE_URL=http://localhost:3000/api
 ## Development
 
 Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -36,6 +39,7 @@ The app will be available at `http://localhost:5173`
 ## Build
 
 Build for production:
+
 ```bash
 npm run build
 ```

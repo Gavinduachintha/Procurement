@@ -1,127 +1,133 @@
-import { useState, useEffect } from 'react'
-import { procurementApi, supplierApi } from '../api/endpoints'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Select from '../components/Select'
-import Alert from '../components/Alert'
-import Modal from '../components/Modal'
-import './SupplyBranchDashboard.css'
+import { useState, useEffect } from "react";
+import { procurementApi, supplierApi } from "../api/endpoints";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import Select from "../components/Select";
+import Alert from "../components/Alert";
+import Modal from "../components/Modal";
+import "./SupplyBranchDashboard.css";
 
 const PROCUREMENT_METHODS = [
-  { label: 'SQ - Sealed Quotation', value: 'SQ' },
-  { label: 'HQ - Hand Quotation', value: 'HQ' },
-  { label: 'ICB - International Competitive Bidding', value: 'ICB' },
-  { label: 'LIB - Limited International Bidding', value: 'LIB' },
-  { label: 'LNB - Limited National Bidding', value: 'LNB' },
-  { label: 'NCB - National Competitive Bidding', value: 'NCB' },
-  { label: 'National Shopping', value: 'NATIONAL_SHOPPING' }
-]
+  { label: "SQ - Sealed Quotation", value: "SQ" },
+  { label: "HQ - Hand Quotation", value: "HQ" },
+  { label: "ICB - International Competitive Bidding", value: "ICB" },
+  { label: "LIB - Limited International Bidding", value: "LIB" },
+  { label: "LNB - Limited National Bidding", value: "LNB" },
+  { label: "NCB - National Competitive Bidding", value: "NCB" },
+  { label: "National Shopping", value: "NATIONAL_SHOPPING" },
+];
 
 const SUPPLIER_CATEGORIES = [
-  { label: 'IT Equipment', value: 'IT_EQUIPMENT' },
-  { label: 'Electrical Equipment', value: 'ELECTRICAL_EQUIPMENT' },
-  { label: 'Laboratory Equipment', value: 'LAB_EQUIPMENT' },
-  { label: 'Furniture', value: 'FURNITURE' },
-  { label: 'Office Equipment', value: 'OFFICE_EQUIPMENT' }
-]
+  { label: "IT Equipment", value: "IT_EQUIPMENT" },
+  { label: "Electrical Equipment", value: "ELECTRICAL_EQUIPMENT" },
+  { label: "Laboratory Equipment", value: "LAB_EQUIPMENT" },
+  { label: "Furniture", value: "FURNITURE" },
+  { label: "Office Equipment", value: "OFFICE_EQUIPMENT" },
+];
 
 export default function SupplyBranchDashboard({ user }) {
-  const [jobs, setJobs] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [selectedJob, setSelectedJob] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [modalType, setModalType] = useState('method')
-  const [suppliers, setSuppliers] = useState([])
-  const [selectedSuppliers, setSelectedSuppliers] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedMethod, setSelectedMethod] = useState('')
-  const [actionLoading, setActionLoading] = useState(false)
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState("method");
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    loadJobs()
-  }, [])
+    loadJobs();
+  }, []);
 
   const loadJobs = async () => {
     try {
-      const response = await procurementApi.getJobs({ status: 'APPROVED' })
-      setJobs(response.data)
+      const response = await procurementApi.getJobs({ status: "APPROVED" });
+      setJobs(response.data);
     } catch (err) {
-      setError('Failed to load jobs')
+      setError("Failed to load jobs");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSelectMethod = (job) => {
-    setSelectedJob(job)
-    setModalType('method')
-    setSelectedMethod('')
-    setIsModalOpen(true)
-  }
+    setSelectedJob(job);
+    setModalType("method");
+    setSelectedMethod("");
+    setIsModalOpen(true);
+  };
 
   const handleSelectCategory = (job) => {
-    setSelectedJob(job)
-    setModalType('category')
-    setSelectedCategory('')
-    setSuppliers([])
-    setSelectedSuppliers([])
-    setIsModalOpen(true)
-  }
+    setSelectedJob(job);
+    setModalType("category");
+    setSelectedCategory("");
+    setSuppliers([]);
+    setSelectedSuppliers([]);
+    setIsModalOpen(true);
+  };
 
   const handleCategoryChange = async (e) => {
-    const category = e.target.value
-    setSelectedCategory(category)
-    
+    const category = e.target.value;
+    setSelectedCategory(category);
+
     if (category) {
       try {
-        const response = await supplierApi.getByCategory(category)
-        setSuppliers(response.data)
+        const response = await supplierApi.getByCategory(category);
+        setSuppliers(response.data);
       } catch (err) {
-        setError('Failed to load suppliers')
+        setError("Failed to load suppliers");
       }
     }
-  }
+  };
 
   const toggleSupplier = (supplierId) => {
-    setSelectedSuppliers(prev =>
+    setSelectedSuppliers((prev) =>
       prev.includes(supplierId)
-        ? prev.filter(id => id !== supplierId)
-        : [...prev, supplierId]
-    )
-  }
+        ? prev.filter((id) => id !== supplierId)
+        : [...prev, supplierId],
+    );
+  };
 
   const handleSubmitMethod = async () => {
-    if (!selectedJob || !selectedMethod) return
+    if (!selectedJob || !selectedMethod) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await procurementApi.selectMethod(selectedJob.id, { method: selectedMethod })
-      setIsModalOpen(false)
-      loadJobs()
+      await procurementApi.selectMethod(selectedJob.id, {
+        method: selectedMethod,
+      });
+      setIsModalOpen(false);
+      loadJobs();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to set procurement method')
+      setError(
+        err.response?.data?.message || "Failed to set procurement method",
+      );
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
   const handleSubmitSuppliers = async () => {
-    if (!selectedJob || selectedSuppliers.length === 0) return
+    if (!selectedJob || selectedSuppliers.length === 0) return;
 
-    setActionLoading(true)
+    setActionLoading(true);
     try {
-      await procurementApi.selectSuppliers(selectedJob.id, { supplier_ids: selectedSuppliers })
-      setIsModalOpen(false)
-      loadJobs()
+      await procurementApi.selectSuppliers(selectedJob.id, {
+        supplier_ids: selectedSuppliers,
+      });
+      setIsModalOpen(false);
+      loadJobs();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to select suppliers')
+      setError(err.response?.data?.message || "Failed to select suppliers");
     } finally {
-      setActionLoading(false)
+      setActionLoading(false);
     }
-  }
+  };
 
-  if (loading) return <div className="loading-state">Loading jobs...</div>
+  if (loading) return <div className="loading-state">Loading jobs...</div>;
 
   return (
     <div className="supply-branch">
@@ -183,7 +189,7 @@ export default function SupplyBranchDashboard({ user }) {
       )}
 
       <Modal
-        isOpen={isModalOpen && modalType === 'method'}
+        isOpen={isModalOpen && modalType === "method"}
         onClose={() => setIsModalOpen(false)}
         title="Select Procurement Method"
       >
@@ -199,7 +205,7 @@ export default function SupplyBranchDashboard({ user }) {
               onClick={handleSubmitMethod}
               disabled={actionLoading || !selectedMethod}
             >
-              {actionLoading ? 'Setting...' : 'Confirm'}
+              {actionLoading ? "Setting..." : "Confirm"}
             </Button>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
@@ -209,7 +215,7 @@ export default function SupplyBranchDashboard({ user }) {
       </Modal>
 
       <Modal
-        isOpen={isModalOpen && modalType === 'category'}
+        isOpen={isModalOpen && modalType === "category"}
         onClose={() => setIsModalOpen(false)}
         title="Select Supplier Category and Suppliers"
       >
@@ -224,7 +230,7 @@ export default function SupplyBranchDashboard({ user }) {
           {suppliers.length > 0 && (
             <div className="suppliers-list">
               <h3>Available Suppliers</h3>
-              {suppliers.map(supplier => (
+              {suppliers.map((supplier) => (
                 <div key={supplier.id} className="supplier-item">
                   <input
                     type="checkbox"
@@ -245,7 +251,7 @@ export default function SupplyBranchDashboard({ user }) {
               onClick={handleSubmitSuppliers}
               disabled={actionLoading || selectedSuppliers.length === 0}
             >
-              {actionLoading ? 'Saving...' : 'Confirm Selection'}
+              {actionLoading ? "Saving..." : "Confirm Selection"}
             </Button>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
@@ -254,5 +260,5 @@ export default function SupplyBranchDashboard({ user }) {
         </div>
       </Modal>
     </div>
-  )
+  );
 }

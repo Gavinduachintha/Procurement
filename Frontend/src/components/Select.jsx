@@ -1,4 +1,4 @@
-import './components.css'
+import "./components.css";
 
 export default function Select({ label, options, error, ...props }) {
   return (
@@ -14,5 +14,5 @@ export default function Select({ label, options, error, ...props }) {
       </select>
       {error && <span className="error">{error}</span>}
     </div>
-  )
+  );
 }

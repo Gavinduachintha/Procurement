@@ -1,4 +1,4 @@
-import './components.css'
+import "./components.css";
 
 export default function Input({ label, error, ...props }) {
   return (
@@ -7,5 +7,5 @@ export default function Input({ label, error, ...props }) {
       <input {...props} />
       {error && <span className="error">{error}</span>}
     </div>
-  )
+  );
 }

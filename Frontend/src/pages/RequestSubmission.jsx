@@ -1,73 +1,73 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { requestApi } from '../api/endpoints'
-import Card from '../components/Card'
-import Input from '../components/Input'
-import Select from '../components/Select'
-import TextArea from '../components/TextArea'
-import Button from '../components/Button'
-import Alert from '../components/Alert'
-import './RequestSubmission.css'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { requestApi } from "../api/endpoints";
+import Card from "../components/Card";
+import Input from "../components/Input";
+import Select from "../components/Select";
+import TextArea from "../components/TextArea";
+import Button from "../components/Button";
+import Alert from "../components/Alert";
+import "./RequestSubmission.css";
 
 export default function RequestSubmission({ user }) {
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    item_name: '',
-    item_description: '',
-    technical_specifications: '',
-    quantity: '',
-    estimated_cost: '',
-    funding_source: '',
-    justification: '',
-    department: '',
-    required_date: '',
-  })
+    item_name: "",
+    item_description: "",
+    technical_specifications: "",
+    quantity: "",
+    estimated_cost: "",
+    funding_source: "",
+    justification: "",
+    department: "",
+    required_date: "",
+  });
 
   const fundingOptions = [
-    { label: 'MPP (Master Procurement Plan)', value: 'MPP' },
-    { label: 'Self-fund', value: 'SELF_FUND' },
-    { label: 'Special Fund', value: 'SPECIAL_FUND' }
-  ]
+    { label: "MPP (Master Procurement Plan)", value: "MPP" },
+    { label: "Self-fund", value: "SELF_FUND" },
+    { label: "Special Fund", value: "SPECIAL_FUND" },
+  ];
 
   const departmentOptions = [
-    { label: 'ICT Center', value: 'ICT_CENTER' },
-    { label: 'Maintenance', value: 'MAINTENANCE' },
-    { label: 'Administration', value: 'ADMINISTRATION' },
-    { label: 'Academic Affairs', value: 'ACADEMIC_AFFAIRS' },
-    { label: 'Student Services', value: 'STUDENT_SERVICES' }
-  ]
+    { label: "ICT Center", value: "ICT_CENTER" },
+    { label: "Maintenance", value: "MAINTENANCE" },
+    { label: "Administration", value: "ADMINISTRATION" },
+    { label: "Academic Affairs", value: "ACADEMIC_AFFAIRS" },
+    { label: "Student Services", value: "STUDENT_SERVICES" },
+  ];
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
 
     try {
       const response = await requestApi.submit({
         ...formData,
         quantity: parseInt(formData.quantity),
-        estimated_cost: parseFloat(formData.estimated_cost)
-      })
+        estimated_cost: parseFloat(formData.estimated_cost),
+      });
 
-      setSuccess('Request submitted successfully!')
+      setSuccess("Request submitted successfully!");
       setTimeout(() => {
-        navigate(`/request/${response.data.id}`)
-      }, 1500)
+        navigate(`/request/${response.data.id}`);
+      }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit request')
+      setError(err.response?.data?.message || "Failed to submit request");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="request-submission">
@@ -176,12 +176,12 @@ export default function RequestSubmission({ user }) {
 
           <div className="form-actions">
             <Button type="submit" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Request'}
+              {loading ? "Submitting..." : "Submit Request"}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate("/dashboard")}
               disabled={loading}
             >
               Cancel
@@ -190,5 +190,5 @@ export default function RequestSubmission({ user }) {
         </form>
       </Card>
     </div>
-  )
+  );
 }
