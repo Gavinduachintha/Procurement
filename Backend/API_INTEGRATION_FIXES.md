@@ -5,6 +5,7 @@
 ### 1. ❌ Request Submission 500 Error
 
 **Problem**: Frontend sends snake_case field names, backend repository expects camelCase
+
 ```javascript
 // Frontend sends:
 { item_name, item_description, estimated_cost, required_date, ... }
@@ -16,6 +17,7 @@
 **Solution**: Added payload transformer in `requestService.submitRequest()` to convert snake_case to camelCase before passing to repository.
 
 **File**: `Backend/src/services/requestService.js`
+
 - Transforms all incoming snake_case fields to camelCase
 - Handles both field name styles for backwards compatibility
 - Added comprehensive debug logging
@@ -27,6 +29,7 @@
 **Solution**: Updated specification service to accept flexible field names and use request's technical_specifications if not provided.
 
 **File**: `Backend/src/services/specificationService.js`
+
 - Accepts `notes`, `review_notes`, or `reviewNotes`
 - Uses `request.technical_specifications` as default for `reviewedSpecifications`
 - Added debug logging
@@ -38,6 +41,7 @@
 **Solution**: Updated approval service to accept either `notes` or `comments`
 
 **File**: `Backend/src/services/approvalService.js`
+
 - Accepts both `payload.notes` and `payload.comments`
 - Added debug logging
 
@@ -48,21 +52,24 @@
 **Solution**: Updated procurement controller to accept both field name styles
 
 **File**: `Backend/src/controllers/procurementController.js`
+
 ```javascript
-req.body.supplierIds || req.body.supplier_ids || []
+req.body.supplierIds || req.body.supplier_ids || [];
 ```
 
 ### 5. ❌ Missing Procurement Method Route
 
 **Problem**: Frontend calls `/procurement/:jobId/method` but backend had no such route
 
-**Solution**: 
-- Added new service method `setProcurementMethod()` 
+**Solution**:
+
+- Added new service method `setProcurementMethod()`
 - Added new controller method `setMethod()`
 - Added new repository method `setProcurementMethod()`
 - Added new routes mapping to these methods
 
 **Files**:
+
 - `Backend/src/repositories/jobRepository.js` - Added `setProcurementMethod()`
 - `Backend/src/services/procurementService.js` - Added `setProcurementMethod()`
 - `Backend/src/controllers/procurementController.js` - Added `setMethod()`
@@ -73,6 +80,7 @@ req.body.supplierIds || req.body.supplier_ids || []
 ## Database Updates
 
 Added status for procurement method selection:
+
 - Job status updates to `'METHOD_SELECTED'` when method is set
 - Proper error handling for invalid methods
 
@@ -81,19 +89,23 @@ Added status for procurement method selection:
 ## Routes Now Supported
 
 ### Request Management
+
 - `POST /requests` - Submit new request ✅ FIXED
 - `GET /requests/mine` - Get requester's requests
 - `GET /requests/:id` - Get request details
 - `POST /requests/:id/confirm-specification` - Confirm specification review
 
 ### Specification Review
+
 - `POST /specifications/:requestId/review` - Submit review ✅ FIXED
 
 ### Approvals
+
 - `GET /approvals/mine/pending` - Get pending approvals
 - `POST /approvals/:requestId/decision` - Submit approval decision ✅ FIXED
 
 ### Procurement
+
 - `POST /procurement/:jobId/method` - Set procurement method ✅ FIXED
 - `POST /procurement/:jobId/suppliers` - Select suppliers ✅ FIXED
 - `POST /procurement/:jobId/select-category` - Select supplier category
@@ -104,22 +116,23 @@ Added status for procurement method selection:
 
 The backend now handles:
 
-| Frontend Field | Accepted Backend Variants |
-|---|---|
-| `item_name` | `item_name`, `itemName` |
-| `item_description` | `item_description`, `itemDescription` |
+| Frontend Field             | Accepted Backend Variants                             |
+| -------------------------- | ----------------------------------------------------- |
+| `item_name`                | `item_name`, `itemName`                               |
+| `item_description`         | `item_description`, `itemDescription`                 |
 | `technical_specifications` | `technical_specifications`, `technicalSpecifications` |
-| `estimated_cost` | `estimated_cost`, `estimatedCost` |
-| `funding_source` | `funding_source`, `fundingSource` |
-| `required_date` | `required_date`, `requiredDate` |
-| `review_notes` / `notes` | `reviewNotes`, `review_notes`, `notes` |
-| `supplier_ids` | `supplierIds`, `supplier_ids` |
+| `estimated_cost`           | `estimated_cost`, `estimatedCost`                     |
+| `funding_source`           | `funding_source`, `fundingSource`                     |
+| `required_date`            | `required_date`, `requiredDate`                       |
+| `review_notes` / `notes`   | `reviewNotes`, `review_notes`, `notes`                |
+| `supplier_ids`             | `supplierIds`, `supplier_ids`                         |
 
 ---
 
 ## Debug Logging Added
 
 All services and controllers now log:
+
 - 📝 Request/action initiation with context
 - 📋 Received payload details
 - 🔄 Data transformations
@@ -127,6 +140,7 @@ All services and controllers now log:
 - ❌ Error context with full details
 
 **Example logs**:
+
 ```
 📝 Backend: Request submission initiated
 📋 Backend: Received payload: { item_name: "...", ... }
@@ -139,6 +153,7 @@ All services and controllers now log:
 ## Testing the Fixes
 
 ### Test 1: Submit Request Form
+
 1. Login as `requester@example.com`
 2. Fill request form:
    - Item Name: "Test Item"
@@ -157,6 +172,7 @@ All services and controllers now log:
 6. **Backend logs**: Should show all transformation logs
 
 ### Test 2: Review Specification
+
 1. Login as `director@example.com`
 2. Go to Spec Review page
 3. Click "Review" on a request
@@ -166,6 +182,7 @@ All services and controllers now log:
 7. **Backend logs**: Should show review submission logs
 
 ### Test 3: Approve Request
+
 1. Login as `dean@example.com`
 2. Go to Approvals page
 3. Click "Approve" on a request
@@ -176,6 +193,7 @@ All services and controllers now log:
 8. **Backend logs**: Should show approval decision logs
 
 ### Test 4: Set Procurement Method
+
 1. Login as `supply@example.com`
 2. Go to Procurement page
 3. Click "Select Method" on a job
@@ -185,6 +203,7 @@ All services and controllers now log:
 7. **Backend logs**: Should show method update logs
 
 ### Test 5: Select Suppliers
+
 1. Continue from Test 4
 2. Click on job card
 3. Select supplier category
@@ -217,6 +236,7 @@ Backend/
 ## Migration Path
 
 No database migrations needed. All changes are backward compatible:
+
 - ✅ Existing requests in database unaffected
 - ✅ New transformation layer accepts both field name styles
 - ✅ Existing API clients continue to work
@@ -246,6 +266,7 @@ No database migrations needed. All changes are backward compatible:
 ## Next Steps
 
 1. **Restart backend** to apply all fixes:
+
    ```bash
    cd Backend
    npm start
@@ -265,13 +286,13 @@ No database migrations needed. All changes are backward compatible:
 
 ## Quick Reference
 
-| Issue | File | Fix | Status |
-|-------|------|-----|--------|
-| Request submission 500 | requestService.js | Payload transformer | ✅ |
-| Spec review fields | specificationService.js | Field flexibility | ✅ |
-| Approval notes field | approvalService.js | Field flexibility | ✅ |
-| Supplier IDs field | procurementController.js | Field flexibility | ✅ |
-| Missing method route | procurementRoutes.js | New route + service | ✅ |
+| Issue                  | File                     | Fix                 | Status |
+| ---------------------- | ------------------------ | ------------------- | ------ |
+| Request submission 500 | requestService.js        | Payload transformer | ✅     |
+| Spec review fields     | specificationService.js  | Field flexibility   | ✅     |
+| Approval notes field   | approvalService.js       | Field flexibility   | ✅     |
+| Supplier IDs field     | procurementController.js | Field flexibility   | ✅     |
+| Missing method route   | procurementRoutes.js     | New route + service | ✅     |
 
 ---
 
