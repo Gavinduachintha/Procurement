@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { approvalApi } from "../api/endpoints";
+import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TextArea from "../components/TextArea";
@@ -18,14 +18,37 @@ export default function ApprovalDashboard({ user }) {
   const [action, setAction] = useState("approve");
 
   useEffect(() => {
+    console.log(
+      "✅ ApprovalDashboard component mounted. User role:",
+      user?.role,
+    );
     loadPendingApprovals();
   }, []);
 
   const loadPendingApprovals = async () => {
     try {
-      const response = await approvalApi.listPending();
-      setRequests(response.data);
+      console.log("🔄 Fetching pending approvals...");
+
+      const response = await api.get("/approvals/mine/pending");
+      let data = response.data.data || response.data;
+
+      console.log("📦 Raw approvals data:", data);
+
+      if (Array.isArray(data)) {
+        console.log("✅ Found", data.length, "pending approvals");
+        setRequests(data);
+      } else if (data && data.requests) {
+        console.log("✅ Found", data.requests.length, "pending approvals");
+        setRequests(data.requests);
+      } else {
+        console.log("⚠️ No pending approvals found");
+        setRequests([]);
+      }
     } catch (err) {
+      console.error("❌ Failed to load approvals:", {
+        message: err.message,
+        status: err.response?.status,
+      });
       setError("Failed to load approvals");
     } finally {
       setLoading(false);
@@ -33,6 +56,12 @@ export default function ApprovalDashboard({ user }) {
   };
 
   const handleApprovalClick = (request, approvalAction) => {
+    console.log(
+      "📋 Opening approval dialog for request:",
+      request.id,
+      "with action:",
+      approvalAction,
+    );
     setSelectedRequest(request);
     setAction(approvalAction);
     setNotes("");
@@ -42,20 +71,38 @@ export default function ApprovalDashboard({ user }) {
   const handleSubmitApproval = async () => {
     if (!selectedRequest) return;
 
+    console.log("📤 Submitting approval decision...", {
+      requestId: selectedRequest.id,
+      decision: action.toUpperCase(),
+      hasNotes: !!notes,
+    });
+
     setActionLoading(true);
     try {
-      if (action === "approve") {
-        await approvalApi.approve(selectedRequest.id, { notes });
-      } else if (action === "reject") {
-        await approvalApi.reject(selectedRequest.id, { notes });
-      } else if (action === "clarification") {
-        await approvalApi.requestClarification(selectedRequest.id, { notes });
-      }
+      const payload = {
+        decision: action.toUpperCase(),
+        notes,
+      };
+
+      console.log("📋 Approval payload:", payload);
+
+      await api.post(`/approvals/${selectedRequest.id}/decision`, payload);
+
+      console.log("✅ Approval decision submitted successfully");
+
       setIsModalOpen(false);
       loadPendingApprovals();
       setSelectedRequest(null);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit approval");
+      const errorMsg =
+        err.response?.data?.message || "Failed to submit approval";
+      console.error("❌ Approval submission failed:", {
+        requestId: selectedRequest.id,
+        decision: action,
+        message: errorMsg,
+        fullError: err.response?.data,
+      });
+      setError(errorMsg);
     } finally {
       setActionLoading(false);
     }

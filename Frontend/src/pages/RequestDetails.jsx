@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { requestApi } from "../api/endpoints";
+import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
@@ -15,14 +15,31 @@ export default function RequestDetails({ user }) {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    console.log("📄 RequestDetails component mounted for request ID:", id);
     loadRequest();
   }, [id]);
 
   const loadRequest = async () => {
     try {
-      const response = await requestApi.get(id);
-      setRequest(response.data);
+      console.log("🔄 Fetching request details for ID:", id);
+
+      const response = await api.get(`/requests/${id}`);
+      const data = response.data.data || response.data;
+
+      console.log("✅ Request loaded:", {
+        id: data.id,
+        status: data.status,
+        itemName: data.item_name,
+        requester: data.requested_by,
+      });
+
+      setRequest(data);
     } catch (err) {
+      console.error("❌ Failed to load request:", {
+        requestId: id,
+        message: err.message,
+        status: err.response?.status,
+      });
       setError("Failed to load request details");
     } finally {
       setLoading(false);
@@ -30,15 +47,32 @@ export default function RequestDetails({ user }) {
   };
 
   const handleConfirmSpecification = async (action) => {
+    console.log(
+      "🔐 Confirming specification with action:",
+      action,
+      "for request:",
+      id,
+    );
+
     setActionLoading(true);
     try {
-      await requestApi.confirmSpecification(id, { action });
+      console.log("📤 Sending confirmation request...");
+
+      await api.post(`/requests/${id}/confirm-specification`, { action });
+
+      console.log("✅ Specification confirmed successfully");
+
       setRequest((prev) => ({ ...prev, status: "APPROVAL_PENDING" }));
       Alert.success = "Specification confirmed successfully";
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to confirm specification",
-      );
+      const errorMsg =
+        err.response?.data?.message || "Failed to confirm specification";
+      console.error("❌ Confirmation failed:", {
+        action,
+        requestId: id,
+        message: errorMsg,
+      });
+      setError(errorMsg);
     } finally {
       setActionLoading(false);
     }

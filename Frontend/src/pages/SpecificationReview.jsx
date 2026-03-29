@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { specificationApi } from "../api/endpoints";
+import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TextArea from "../components/TextArea";
@@ -17,16 +17,41 @@ export default function SpecificationReview({ user }) {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    console.log(
+      "🔍 SpecificationReview component mounted. User role:",
+      user?.role,
+    );
     loadReviews();
   }, []);
 
   const loadReviews = async () => {
     try {
-      const response = await specificationApi.listReviews({
-        status: "SPEC_CHECKING",
-      });
-      setRequests(response.data);
+      console.log("🔄 Fetching specification reviews...");
+
+      const response = await api.get("/requests/assigned/specification");
+      let data = response.data.data || response.data;
+
+      console.log("📦 Raw reviews data:", data);
+
+      if (Array.isArray(data)) {
+        console.log("✅ Found", data.length, "specifications to review");
+        setRequests(data);
+      } else if (data && data.requests) {
+        console.log(
+          "✅ Found",
+          data.requests.length,
+          "specifications to review",
+        );
+        setRequests(data.requests);
+      } else {
+        console.log("⚠️ No specifications found");
+        setRequests([]);
+      }
     } catch (err) {
+      console.error("❌ Failed to load reviews:", {
+        message: err.message,
+        status: err.response?.status,
+      });
       setError("Failed to load specification reviews");
     } finally {
       setLoading(false);
@@ -34,6 +59,7 @@ export default function SpecificationReview({ user }) {
   };
 
   const handleReviewClick = (request) => {
+    console.log("👁️ Opening review modal for request:", request.id);
     setSelectedRequest(request);
     setReviewNotes("");
     setIsModalOpen(true);
@@ -42,16 +68,27 @@ export default function SpecificationReview({ user }) {
   const handleSubmitReview = async () => {
     if (!selectedRequest) return;
 
+    console.log("📤 Submitting review for request:", selectedRequest.id);
+
     setActionLoading(true);
     try {
-      await specificationApi.review(selectedRequest.id, {
-        notes: reviewNotes,
-      });
+      const payload = { notes: reviewNotes };
+      console.log("📋 Review payload:", payload);
+
+      await api.post(`/specifications/${selectedRequest.id}/review`, payload);
+
+      console.log("✅ Review submitted successfully");
+
       setIsModalOpen(false);
       loadReviews();
       setSelectedRequest(null);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit review");
+      const errorMsg = err.response?.data?.message || "Failed to submit review";
+      console.error("❌ Review submission failed:", {
+        requestId: selectedRequest.id,
+        message: errorMsg,
+      });
+      setError(errorMsg);
     } finally {
       setActionLoading(false);
     }

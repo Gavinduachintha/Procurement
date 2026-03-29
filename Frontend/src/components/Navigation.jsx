@@ -20,6 +20,8 @@ export default function Navigation({ user, onLogout }) {
       { to: "/dashboard", label: "Dashboard", icon: Home, show: true },
     ];
 
+    console.log("🔗 Navigation.jsx: Building links for role:", user?.role);
+
     if (user?.role === "REQUESTING_OFFICER") {
       links.push({
         to: "/request/new",
@@ -61,6 +63,7 @@ export default function Navigation({ user, onLogout }) {
       });
     }
 
+    console.log("✅ Navigation.jsx: Built", links.length, "navigation links");
     return links;
   };
 

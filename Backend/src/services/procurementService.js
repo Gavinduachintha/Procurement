@@ -90,6 +90,33 @@ export const procurementService = {
     return jobRepository.assignClerk(jobId, clerkId);
   },
 
+  async setProcurementMethod(user, jobId, procurementMethod) {
+    if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
+      throw new ApiError(403, "Only supply branch can set procurement method");
+    }
+
+    if (!PROCUREMENT_METHODS.includes(procurementMethod)) {
+      throw new ApiError(400, "Invalid procurement method");
+    }
+
+    const job = await jobRepository.findById(jobId);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    console.log("📝 Backend: Setting procurement method for job:", jobId);
+    console.log("🔧 Backend: Method:", procurementMethod);
+
+    const updated = await jobRepository.setProcurementMethod(
+      jobId,
+      procurementMethod,
+    );
+
+    console.log("✅ Backend: Procurement method updated successfully");
+
+    return updated;
+  },
+
   async selectSupplierCategory(user, jobId, category) {
     const job = await jobRepository.findById(jobId);
     if (!job) {

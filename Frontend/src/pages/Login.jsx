@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authApi } from "../api/endpoints";
+import api from "../api/client";
 import Input from "../components/Input";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
@@ -15,21 +15,36 @@ export default function Login({ setUser }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("🔐 Login attempt with email:", email);
+
     setError("");
     setLoading(true);
 
     try {
-      const response = await authApi.login(email, password);
+      console.log("📝 Sending login request...");
+      const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
+
+      console.log(
+        "✅ Login successful for user:",
+        user.id,
+        "with role:",
+        user.role,
+      );
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
+
+      console.log("💾 Stored token and user in localStorage");
+
       setUser(user);
+      console.log("🎯 Navigating to dashboard...");
       navigate("/dashboard");
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed. Please try again.",
-      );
+      const errorMsg =
+        err.response?.data?.message || "Login failed. Please try again.";
+      console.error("❌ Login failed:", errorMsg, err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

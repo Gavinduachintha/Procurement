@@ -40,18 +40,34 @@ export const specificationService = {
       throw new ApiError(400, "Request is not in a specification review state");
     }
 
-    await specificationRepository.createReview({
+    // Transform payload to use backend field names
+    const reviewData = {
       purchaseRequestId: request.id,
       checkerId: user.id,
-      reviewedSpecifications: payload.reviewedSpecifications,
-      reviewNotes: payload.reviewNotes,
+      reviewedSpecifications:
+        payload.reviewedSpecifications ||
+        payload.reviewed_specifications ||
+        request.technical_specifications,
+      reviewNotes:
+        payload.reviewNotes || payload.notes || payload.review_notes || "",
       decision: "RETURNED_TO_REQUESTER",
-    });
+    };
+
+    console.log("📝 Backend: Specification review initiated");
+    console.log("📋 Backend: Review data:", reviewData);
+
+    await specificationRepository.createReview(reviewData);
+
+    console.log("✅ Backend: Specification review saved");
 
     const updated = await requestRepository.updateSpecificationReviewResult(
       request.id,
-      payload.reviewedSpecifications,
+      reviewData.reviewedSpecifications,
       REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
+    );
+
+    console.log(
+      "✅ Backend: Request status updated to SPEC_RETURNED_TO_REQUESTER",
     );
 
     await notificationService.notifyUsers([request.requester_id], {

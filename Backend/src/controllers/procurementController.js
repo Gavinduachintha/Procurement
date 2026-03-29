@@ -33,6 +33,15 @@ export const procurementController = {
     res.json(job);
   }),
 
+  setMethod: asyncHandler(async (req, res) => {
+    const job = await procurementService.setProcurementMethod(
+      req.user,
+      Number(req.params.jobId),
+      req.body.method || req.body.procurementMethod,
+    );
+    res.json(job);
+  }),
+
   selectCategory: asyncHandler(async (req, res) => {
     const suppliers = await procurementService.selectSupplierCategory(
       req.user,
@@ -46,7 +55,7 @@ export const procurementController = {
     const selected = await procurementService.selectSuppliers(
       req.user,
       Number(req.params.jobId),
-      req.body.supplierIds || [],
+      req.body.supplierIds || req.body.supplier_ids || [],
     );
     res.json(selected);
   }),

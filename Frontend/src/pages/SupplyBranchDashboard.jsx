@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { procurementApi, supplierApi } from "../api/endpoints";
+import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import Select from "../components/Select";
@@ -39,14 +39,40 @@ export default function SupplyBranchDashboard({ user }) {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
+    console.log(
+      "🏭 SupplyBranchDashboard component mounted. User role:",
+      user?.role,
+    );
     loadJobs();
   }, []);
 
   const loadJobs = async () => {
     try {
-      const response = await procurementApi.getJobs({ status: "APPROVED" });
-      setJobs(response.data);
+      console.log("🔄 Fetching approved jobs without procurement...");
+
+      const response = await api.get("/requests/approved/without-jobs");
+      let data = response.data.data || response.data;
+
+      console.log("📦 Raw jobs data:", data);
+
+      if (Array.isArray(data)) {
+        console.log("✅ Found", data.length, "jobs to process");
+        setJobs(data);
+      } else if (data && data.requests) {
+        console.log("✅ Found", data.requests.length, "jobs to process");
+        setJobs(data.requests);
+      } else if (data && data.jobs) {
+        console.log("✅ Found", data.jobs.length, "jobs to process");
+        setJobs(data.jobs);
+      } else {
+        console.log("⚠️ No jobs found");
+        setJobs([]);
+      }
     } catch (err) {
+      console.error("❌ Failed to load jobs:", {
+        message: err.message,
+        status: err.response?.status,
+      });
       setError("Failed to load jobs");
     } finally {
       setLoading(false);
@@ -54,6 +80,7 @@ export default function SupplyBranchDashboard({ user }) {
   };
 
   const handleSelectMethod = (job) => {
+    console.log("🔧 Opening method selection for job:", job.id);
     setSelectedJob(job);
     setModalType("method");
     setSelectedMethod("");
@@ -61,6 +88,7 @@ export default function SupplyBranchDashboard({ user }) {
   };
 
   const handleSelectCategory = (job) => {
+    console.log("📦 Opening category selection for job:", job.id);
     setSelectedJob(job);
     setModalType("category");
     setSelectedCategory("");
@@ -71,19 +99,28 @@ export default function SupplyBranchDashboard({ user }) {
 
   const handleCategoryChange = async (e) => {
     const category = e.target.value;
+    console.log("🏷️ Category selected:", category);
     setSelectedCategory(category);
 
     if (category) {
       try {
-        const response = await supplierApi.getByCategory(category);
-        setSuppliers(response.data);
+        console.log("🔄 Fetching suppliers for category:", category);
+
+        const response = await api.get("/procurement/suppliers", {
+          params: { category },
+        });
+        console.log("✅ Found suppliers:", response.data);
+        let data = response.data.data || response.data;
+        setSuppliers(Array.isArray(data) ? data : []);
       } catch (err) {
+        console.error("❌ Failed to load suppliers:", err.message);
         setError("Failed to load suppliers");
       }
     }
   };
 
   const toggleSupplier = (supplierId) => {
+    console.log("✓ Toggling supplier:", supplierId);
     setSelectedSuppliers((prev) =>
       prev.includes(supplierId)
         ? prev.filter((id) => id !== supplierId)
@@ -94,17 +131,30 @@ export default function SupplyBranchDashboard({ user }) {
   const handleSubmitMethod = async () => {
     if (!selectedJob || !selectedMethod) return;
 
+    console.log("📤 Submitting procurement method...", {
+      jobId: selectedJob.id,
+      method: selectedMethod,
+    });
+
     setActionLoading(true);
     try {
-      await procurementApi.selectMethod(selectedJob.id, {
-        method: selectedMethod,
-      });
+      const payload = { method: selectedMethod };
+      console.log("📋 Method payload:", payload);
+
+      await api.post(`/procurement/${selectedJob.id}/method`, payload);
+
+      console.log("✅ Procurement method set successfully");
       setIsModalOpen(false);
       loadJobs();
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to set procurement method",
-      );
+      const errorMsg =
+        err.response?.data?.message || "Failed to set procurement method";
+      console.error("❌ Method submission failed:", {
+        jobId: selectedJob.id,
+        method: selectedMethod,
+        message: errorMsg,
+      });
+      setError(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -113,15 +163,31 @@ export default function SupplyBranchDashboard({ user }) {
   const handleSubmitSuppliers = async () => {
     if (!selectedJob || selectedSuppliers.length === 0) return;
 
+    console.log("📤 Submitting supplier selection...", {
+      jobId: selectedJob.id,
+      supplierIds: selectedSuppliers,
+    });
+
     setActionLoading(true);
     try {
-      await procurementApi.selectSuppliers(selectedJob.id, {
-        supplier_ids: selectedSuppliers,
-      });
+      const payload = { supplier_ids: selectedSuppliers };
+      console.log("📋 Supplier payload:", payload);
+
+      await api.post(`/procurement/${selectedJob.id}/suppliers`, payload);
+
+      console.log("✅ Suppliers submitted successfully");
+
       setIsModalOpen(false);
       loadJobs();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to select suppliers");
+      const errorMsg =
+        err.response?.data?.message || "Failed to select suppliers";
+      console.error("❌ Supplier submission failed:", {
+        jobId: selectedJob.id,
+        selectedCount: selectedSuppliers.length,
+        message: errorMsg,
+      });
+      setError(errorMsg);
     } finally {
       setActionLoading(false);
     }

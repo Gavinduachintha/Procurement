@@ -31,12 +31,22 @@ export const approvalService = {
       throw new ApiError(400, "Invalid decision");
     }
 
+    console.log("📝 Backend: Approval decision initiated");
+    console.log("📋 Backend: Decision payload:", {
+      requestId: request.id,
+      decision: decision,
+      approverId: user.id,
+      comments: payload.notes || payload.comments,
+    });
+
     const updatedApproval = await approvalRepository.decide({
       purchaseRequestId: request.id,
       approverId: user.id,
       decision,
-      comments: payload.comments,
+      comments: payload.notes || payload.comments,
     });
+
+    console.log("✅ Backend: Approval decision recorded");
 
     if (!updatedApproval) {
       throw new ApiError(404, "Approval slot not found for this approver");

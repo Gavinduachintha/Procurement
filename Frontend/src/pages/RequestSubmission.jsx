@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { requestApi } from "../api/endpoints";
+import api from "../api/client";
 import Card from "../components/Card";
 import Input from "../components/Input";
 import Select from "../components/Select";
@@ -24,7 +24,13 @@ export default function RequestSubmission({ user }) {
     justification: "",
     department: "",
     required_date: "",
+    itemType: "",
   });
+
+  const itemTypeOptions = [
+    { label: "IT Equipment", value: "IT" },
+    { label: "Non-IT Equipment", value: "NON_IT" },
+  ];
 
   const fundingOptions = [
     { label: "MPP (Master Procurement Plan)", value: "MPP" },
@@ -47,23 +53,47 @@ export default function RequestSubmission({ user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("📝 Form submission started");
+    console.log("📋 Form data:", formData);
+
+    // Validate required fields
+    if (!formData.itemType) {
+      console.error("❌ Validation failed: itemType is required");
+      setError("Item Type is required");
+      return;
+    }
+
     setError("");
     setSuccess("");
     setLoading(true);
 
     try {
-      const response = await requestApi.submit({
+      const payload = {
         ...formData,
         quantity: parseInt(formData.quantity),
         estimated_cost: parseFloat(formData.estimated_cost),
-      });
+      };
+
+      console.log("📤 Sending request payload:", payload);
+
+      const response = await api.post("/requests", payload);
+
+      console.log("✅ Request created successfully:", response.data);
 
       setSuccess("Request submitted successfully!");
       setTimeout(() => {
+        console.log("🎯 Redirecting to request details:", response.data.id);
         navigate(`/request/${response.data.id}`);
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to submit request");
+      const errorMsg =
+        err.response?.data?.message || "Failed to submit request";
+      console.error("❌ Request submission failed:", {
+        message: errorMsg,
+        status: err.response?.status,
+        fullError: err.response?.data,
+      });
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -90,6 +120,14 @@ export default function RequestSubmission({ user }) {
               onChange={handleChange}
               required
               placeholder="e.g., Laptop"
+            />
+            <Select
+              label="Item Type *"
+              name="itemType"
+              options={itemTypeOptions}
+              value={formData.itemType}
+              onChange={handleChange}
+              required
             />
             <TextArea
               label="Item Description *"

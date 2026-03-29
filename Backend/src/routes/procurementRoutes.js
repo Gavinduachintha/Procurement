@@ -9,6 +9,7 @@ router.post("/suppliers", procurementController.createSupplier);
 router.get("/suppliers", procurementController.listSuppliers);
 router.post("/requests/:requestId/start", procurementController.startJob);
 router.post("/jobs/:jobId/assign-clerk", procurementController.assignClerk);
+router.post("/jobs/:jobId/set-method", procurementController.setMethod);
 router.post(
   "/jobs/:jobId/select-category",
   procurementController.selectCategory,
@@ -22,5 +23,12 @@ router.post(
   procurementController.generateLetters,
 );
 router.get("/jobs/:jobId/schedule", procurementController.schedule);
+
+// Alternative routes (matching frontend expectations)
+// POST /procurement/:jobId/method -> sets procurement method
+router.post("/:jobId/method", procurementController.setMethod);
+
+// POST /procurement/:jobId/suppliers -> selects suppliers
+router.post("/:jobId/suppliers", procurementController.selectSuppliers);
 
 export default router;

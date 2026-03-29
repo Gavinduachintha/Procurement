@@ -20,11 +20,25 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log(
+      "🚀 App.jsx: Component mounted, checking for existing session...",
+    );
+
     const token = localStorage.getItem("token");
     const userData = localStorage.getItem("user");
 
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      const parsedUser = JSON.parse(userData);
+      console.log("✅ App.jsx: Session found, user:", {
+        id: parsedUser.id,
+        name: parsedUser.name,
+        role: parsedUser.role,
+      });
+      setUser(parsedUser);
+    } else {
+      console.log(
+        "⚠️ App.jsx: No session found, user will be redirected to login",
+      );
     }
     setLoading(false);
   }, []);

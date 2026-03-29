@@ -66,6 +66,17 @@ export const jobRepository = {
     return rows[0];
   },
 
+  async setProcurementMethod(jobId, procurementMethod) {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET procurement_method = $2, status = 'METHOD_SELECTED'
+       WHERE id = $1
+       RETURNING *`,
+      [jobId, procurementMethod],
+    );
+    return rows[0];
+  },
+
   async setSupplierCategory(jobId, category) {
     const { rows } = await query(
       `UPDATE jobs
