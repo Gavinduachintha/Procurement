@@ -56,11 +56,12 @@ export const requestRepository = {
 
   async listAssignedForSpecificationChecker(checkerId) {
     const { rows } = await query(
-      `SELECT *
-       FROM purchase_requests
-       WHERE specification_checker_id = $1
-         AND status IN ('SPEC_REVIEW_PENDING', 'SPEC_REWORK_REQUESTED')
-       ORDER BY updated_at DESC`,
+      `SELECT pr.*, u.full_name AS requested_by_name
+       FROM purchase_requests pr
+       LEFT JOIN users u ON pr.requester_id = u.id
+       WHERE pr.specification_checker_id = $1
+         AND pr.status IN ('SPEC_REVIEW_PENDING', 'SPEC_REWORK_REQUESTED')
+       ORDER BY pr.updated_at DESC`,
       [checkerId],
     );
     return rows;
