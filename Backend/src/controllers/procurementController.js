@@ -19,7 +19,7 @@ export const procurementController = {
     const job = await procurementService.chooseMethodAndCreateJob(
       req.user,
       Number(req.params.requestId),
-      req.body.procurementMethod,
+      req.body.method || req.body.procurementMethod,
     );
     res.status(201).json(job);
   }),

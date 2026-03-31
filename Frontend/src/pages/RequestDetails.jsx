@@ -58,7 +58,9 @@ export default function RequestDetails({ user }) {
     try {
       console.log("📤 Sending confirmation request...");
 
-      await api.post(`/requests/${id}/confirm-specification`, { action });
+      await api.post(`/specifications/${id}/requester-confirmation`, {
+        action,
+      });
 
       console.log("✅ Specification confirmed successfully");
 
@@ -196,37 +198,17 @@ export default function RequestDetails({ user }) {
         </div>
       </Card>
 
-      {(request.status === "SPEC_CHECKED" ||
-        request.status === "SPEC_RETURNED_TO_REQUESTER") &&
-        request.requester_id === user?.id && (
-          <Card className="action-card">
-            <div className="detail-section">
-              <h2>Specification Review Complete</h2>
-              <p>
-                The specification checker has reviewed your specifications.
-                Please confirm to proceed.
-              </p>
-              <div className="action-buttons">
-                <Button
-                  variant="success"
-                  onClick={() => handleConfirmSpecification("ACCEPT")}
-                  disabled={actionLoading}
-                >
-                  Accept Specifications
-                </Button>
-                <Button
-                  variant="warning"
-                  onClick={() =>
-                    handleConfirmSpecification("REQUEST_MODIFICATION")
-                  }
-                  disabled={actionLoading}
-                >
-                  Request Modification
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
+      {request.status === "APPROVED" && request.requester_id === user?.id && (
+        <Card className="action-card">
+          <div className="detail-section">
+            <h2>✅ Request Approved for Procurement</h2>
+            <p>
+              Your request has been approved and is now with the Supply Branch
+              for procurement.
+            </p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

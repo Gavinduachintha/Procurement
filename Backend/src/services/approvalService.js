@@ -6,11 +6,23 @@ import { notificationService } from "./notificationService.js";
 
 export const approvalService = {
   async decide(user, requestId, payload) {
+    console.log("📝 Backend: Approval decision initiated");
+    console.log("📋 Backend: User:", { id: user.id, role: user.role });
+    console.log("📋 Backend: Request ID:", requestId);
+    console.log("📋 Backend: Payload:", payload);
+
     if (!APPROVER_ROLES.includes(user.role)) {
+      console.log("❌ Backend: User role not in approver roles:", user.role);
       throw new ApiError(403, "Only approval officials can make this decision");
     }
 
     const request = await requestRepository.findById(requestId);
+    console.log("📋 Backend: Found request:", {
+      id: request?.id,
+      requestId: request?.request_id,
+      status: request?.status,
+    });
+
     if (!request) {
       throw new ApiError(404, "Request not found");
     }
@@ -21,10 +33,16 @@ export const approvalService = {
         REQUEST_STATUS.CLARIFICATION_REQUESTED,
       ].includes(request.status)
     ) {
+      console.log(
+        "❌ Backend: Request not in approval state. Status:",
+        request.status,
+      );
       throw new ApiError(400, "Request is not in approval state");
     }
 
     const decision = payload.decision;
+    console.log("📋 Backend: Decision:", decision);
+
     if (
       !["APPROVED", "REJECTED", "CLARIFICATION_REQUESTED"].includes(decision)
     ) {
@@ -63,6 +81,9 @@ export const approvalService = {
     } else if (Number(summary.approved_count) === Number(summary.total_count)) {
       nextStatus = REQUEST_STATUS.APPROVED;
     }
+
+    console.log("📊 Backend: Approval summary:", summary);
+    console.log("📋 Backend: New status:", nextStatus);
 
     const updatedRequest = await requestRepository.updateStatus(
       request.id,

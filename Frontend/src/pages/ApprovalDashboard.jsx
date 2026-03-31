@@ -27,27 +27,40 @@ export default function ApprovalDashboard({ user }) {
 
   const loadPendingApprovals = async () => {
     try {
-      console.log("🔄 Fetching pending approvals...");
+      console.log(
+        "🔄 Fetching pending approvals for user:",
+        user?.id,
+        "role:",
+        user?.role,
+      );
 
       const response = await api.get("/approvals/mine/pending");
       let data = response.data.data || response.data;
 
       console.log("📦 Raw approvals data:", data);
+      console.log("📦 Response status:", response.status);
+      console.log("📦 Full response:", response);
 
       if (Array.isArray(data)) {
         console.log("✅ Found", data.length, "pending approvals");
+        if (data.length > 0) {
+          console.log("📋 First approval item:", data[0]);
+        }
         setRequests(data);
       } else if (data && data.requests) {
         console.log("✅ Found", data.requests.length, "pending approvals");
         setRequests(data.requests);
       } else {
         console.log("⚠️ No pending approvals found");
+        console.log("📦 Data type:", typeof data);
         setRequests([]);
       }
     } catch (err) {
       console.error("❌ Failed to load approvals:", {
         message: err.message,
         status: err.response?.status,
+        data: err.response?.data,
+        userId: user?.id,
       });
       setError("Failed to load approvals");
     } finally {
@@ -75,12 +88,22 @@ export default function ApprovalDashboard({ user }) {
       requestId: selectedRequest.id,
       decision: action.toUpperCase(),
       hasNotes: !!notes,
+      requestStatus: selectedRequest.status,
     });
 
     setActionLoading(true);
     try {
+      // Map frontend action names to backend decision values
+      const decisionMap = {
+        approve: "APPROVED",
+        reject: "REJECTED",
+        clarification: "CLARIFICATION_REQUESTED",
+      };
+
+      const decision = decisionMap[action] || action.toUpperCase();
+
       const payload = {
-        decision: action.toUpperCase(),
+        decision,
         notes,
       };
 

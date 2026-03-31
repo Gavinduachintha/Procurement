@@ -1,4 +1,5 @@
 import { requestRepository } from "../repositories/requestRepository.js";
+import { userRepository } from "../repositories/userRepository.js";
 import { specificationRepository } from "../repositories/specificationRepository.js";
 import { ApiError } from "../utils/apiError.js";
 import { REQUEST_STATUS, USER_ROLES } from "../utils/constants.js";
@@ -6,80 +7,172 @@ import { notificationService } from "./notificationService.js";
 
 export const specificationService = {
   async reviewSpecification(user, requestId, payload) {
-    if (
-      ![
-        USER_ROLES.DIRECTOR_ICT,
-        USER_ROLES.MAINTENANCE_ENGINEER,
-        USER_ROLES.SPECIFICATION_CHECKER,
-      ].includes(user.role)
-    ) {
-      throw new ApiError(
-        403,
-        "Only specification checking officers can review specifications",
+    try {
+      console.log("📝 Backend: Specification review initiated");
+      console.log("📋 Backend: User:", { id: user.id, role: user.role });
+      console.log("📋 Backend: Request ID:", requestId);
+      console.log("📋 Backend: Payload:", payload);
+
+      if (
+        ![
+          USER_ROLES.DIRECTOR_ICT,
+          USER_ROLES.MAINTENANCE_ENGINEER,
+          USER_ROLES.SPECIFICATION_CHECKER,
+        ].includes(user.role)
+      ) {
+        throw new ApiError(
+          403,
+          "Only specification checking officers can review specifications",
+        );
+      }
+
+      const request = await requestRepository.findById(requestId);
+      if (!request) {
+        throw new ApiError(404, "Request not found");
+      }
+
+      if (request.specification_checker_id !== user.id) {
+        throw new ApiError(
+          403,
+          "You are not assigned as the specification checker for this request",
+        );
+      }
+
+      if (
+        ![
+          REQUEST_STATUS.SPEC_REVIEW_PENDING,
+          REQUEST_STATUS.SPEC_REWORK_REQUESTED,
+        ].includes(request.status)
+      ) {
+        throw new ApiError(
+          400,
+          "Request is not in a specification review state",
+        );
+      }
+
+      // Transform payload to use backend field names
+      const reviewData = {
+        purchaseRequestId: request.id,
+        checkerId: user.id,
+        reviewedSpecifications:
+          payload.reviewedSpecifications ||
+          payload.reviewed_specifications ||
+          request.technical_specifications,
+        reviewNotes:
+          payload.reviewNotes || payload.notes || payload.review_notes || "",
+        decision: "RETURNED_TO_REQUESTER",
+      };
+
+      console.log("📝 Backend: Review data prepared:", reviewData);
+
+      await specificationRepository.createReview(reviewData);
+
+      console.log("✅ Backend: Specification review saved");
+
+      // Directly approve and send to Supply Branch (no requester confirmation needed)
+      const updated = await requestRepository.updateStatus(
+        request.id,
+        REQUEST_STATUS.APPROVED,
       );
-    }
 
-    const request = await requestRepository.findById(requestId);
-    if (!request) {
-      throw new ApiError(404, "Request not found");
-    }
-
-    if (request.specification_checker_id !== user.id) {
-      throw new ApiError(
-        403,
-        "You are not assigned as the specification checker for this request",
+      console.log(
+        "✅ Backend: Request status updated directly to APPROVED (going to Supply Branch)",
       );
+
+      // Notify Requesting Officer
+      console.log("📧 Backend: Notifying requesting officer...");
+      await notificationService.notifyUsers([request.requester_id], {
+        eventType: "SPEC_APPROVED",
+        subject: `Specifications approved (${request.request_id})`,
+        message: `Your specification for ${request.request_id} has been approved and is now going to Supply Branch for procurement.`,
+      });
+      console.log("✅ Backend: Requesting officer notified");
+
+      // Notify all stakeholders (Dean, Registrar, Bursar, Vice Chancellor)
+      try {
+        console.log("📧 Backend: Notifying stakeholders...");
+        const stakeholderRoles = [
+          USER_ROLES.DEAN,
+          USER_ROLES.REGISTRAR,
+          USER_ROLES.BURSAR,
+          USER_ROLES.VICE_CHANCELLOR,
+        ];
+
+        // Get users for each stakeholder role
+        const stakeholderResults = await Promise.all(
+          stakeholderRoles.map((role) => {
+            console.log("🔍 Backend: Looking for role:", role);
+            return userRepository.findByRole(role).catch((err) => {
+              console.error(
+                "❌ Backend: Error finding role:",
+                role,
+                err.message,
+              );
+              return [];
+            });
+          }),
+        );
+        const stakeholders = stakeholderResults.flat();
+        console.log("✅ Backend: Found", stakeholders.length, "stakeholders");
+
+        if (stakeholders && stakeholders.length > 0) {
+          const stakeholderIds = stakeholders.map((s) => s.id);
+          console.log("📧 Backend: Notifying stakeholder IDs:", stakeholderIds);
+          await notificationService.notifyUsers(stakeholderIds, {
+            eventType: "REQUEST_APPROVED_FOR_PROCUREMENT",
+            subject: `Request approved for procurement (${request.request_id})`,
+            message: `Request ${request.request_id} has been approved for procurement. Supply Branch will now handle the procurement process.`,
+          });
+          console.log("✅ Backend: Stakeholders notified");
+        }
+
+        // Notify Supply Branch
+        console.log("📧 Backend: Notifying supply branch...");
+        const supplyBranch = await userRepository
+          .findByRole(USER_ROLES.SUPPLY_BRANCH)
+          .catch((err) => {
+            console.error(
+              "❌ Backend: Error finding supply branch:",
+              err.message,
+            );
+            return [];
+          });
+
+        if (supplyBranch && supplyBranch.length > 0) {
+          const supplyBranchIds = supplyBranch.map((s) => s.id);
+          console.log(
+            "📧 Backend: Notifying supply branch IDs:",
+            supplyBranchIds,
+          );
+          await notificationService.notifyUsers(supplyBranchIds, {
+            eventType: "NEW_PROCUREMENT_REQUEST",
+            subject: `New request ready for procurement (${request.request_id})`,
+            message: `Request ${request.request_id} is now ready for procurement. Please create procurement jobs.`,
+          });
+          console.log("✅ Backend: Supply branch notified");
+        }
+      } catch (err) {
+        console.error("⚠️ Backend: Error notifying stakeholders:", err.message);
+        // Don't fail the request if notifications fail
+      }
+
+      console.log("✅ Backend: Specification review complete");
+      return updated;
+    } catch (err) {
+      console.error("❌ Backend: Specification review error:", {
+        message: err.message,
+        stack: err.stack,
+      });
+      throw err;
     }
-
-    if (
-      ![
-        REQUEST_STATUS.SPEC_REVIEW_PENDING,
-        REQUEST_STATUS.SPEC_REWORK_REQUESTED,
-      ].includes(request.status)
-    ) {
-      throw new ApiError(400, "Request is not in a specification review state");
-    }
-
-    // Transform payload to use backend field names
-    const reviewData = {
-      purchaseRequestId: request.id,
-      checkerId: user.id,
-      reviewedSpecifications:
-        payload.reviewedSpecifications ||
-        payload.reviewed_specifications ||
-        request.technical_specifications,
-      reviewNotes:
-        payload.reviewNotes || payload.notes || payload.review_notes || "",
-      decision: "RETURNED_TO_REQUESTER",
-    };
-
-    console.log("📝 Backend: Specification review initiated");
-    console.log("📋 Backend: Review data:", reviewData);
-
-    await specificationRepository.createReview(reviewData);
-
-    console.log("✅ Backend: Specification review saved");
-
-    const updated = await requestRepository.updateSpecificationReviewResult(
-      request.id,
-      reviewData.reviewedSpecifications,
-      REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
-    );
-
-    console.log(
-      "✅ Backend: Request status updated to SPEC_RETURNED_TO_REQUESTER",
-    );
-
-    await notificationService.notifyUsers([request.requester_id], {
-      eventType: "SPEC_REVIEW_COMPLETED",
-      subject: `Specification reviewed (${request.request_id})`,
-      message: `Specification review completed for ${request.request_id}. Requesting officer confirmation is required.`,
-    });
-
-    return updated;
   },
 
   async requesterConfirmation(user, requestId, payload) {
+    console.log("📝 Backend: Requester confirmation initiated");
+    console.log("📋 Backend: User:", { id: user.id, role: user.role });
+    console.log("📋 Backend: Request ID:", requestId);
+    console.log("📋 Backend: Payload:", payload);
+
     if (user.role !== USER_ROLES.REQUESTING_OFFICER) {
       throw new ApiError(
         403,
@@ -88,6 +181,13 @@ export const specificationService = {
     }
 
     const request = await requestRepository.findById(requestId);
+    console.log("📋 Backend: Found request:", {
+      id: request?.id,
+      requestId: request?.request_id,
+      status: request?.status,
+      requester_id: request?.requester_id,
+    });
+
     if (!request) {
       throw new ApiError(404, "Request not found");
     }
@@ -97,6 +197,12 @@ export const specificationService = {
     }
 
     if (request.status !== REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER) {
+      console.log(
+        "❌ Backend: Request status mismatch. Expected:",
+        REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
+        "Got:",
+        request.status,
+      );
       throw new ApiError(
         400,
         "Request is not waiting for requester confirmation",
@@ -104,11 +210,15 @@ export const specificationService = {
     }
 
     const action = payload.action;
+    console.log("📋 Backend: Action:", action);
+
     if (action === "ACCEPT") {
       const updated = await requestRepository.updateStatus(
         request.id,
         REQUEST_STATUS.APPROVAL_PENDING,
       );
+
+      console.log("✅ Backend: Request status updated to APPROVAL_PENDING");
 
       await notificationService.notifyUsers([request.requester_id], {
         eventType: "SPEC_CONFIRMED",
@@ -123,6 +233,10 @@ export const specificationService = {
       const updated = await requestRepository.updateStatus(
         request.id,
         REQUEST_STATUS.SPEC_REWORK_REQUESTED,
+      );
+
+      console.log(
+        "✅ Backend: Request status updated to SPEC_REWORK_REQUESTED",
       );
 
       await notificationService.notifyUsers(

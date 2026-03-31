@@ -7,6 +7,7 @@ import {
 import { useState, useEffect } from "react";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequestSubmission from "./pages/RequestSubmission";
 import SpecificationReview from "./pages/SpecificationReview";
@@ -51,6 +52,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login setUser={setUser} />} />
+        <Route path="/register" element={<Register setUser={setUser} />} />
 
         {user ? (
           <Route element={<Layout user={user} setUser={setUser} />}>

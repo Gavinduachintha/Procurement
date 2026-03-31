@@ -25,8 +25,8 @@ router.post(
 router.get("/jobs/:jobId/schedule", procurementController.schedule);
 
 // Alternative routes (matching frontend expectations)
-// POST /procurement/:jobId/method -> sets procurement method
-router.post("/:jobId/method", procurementController.setMethod);
+// POST /procurement/:requestId/method -> creates job with procurement method for approved request
+router.post("/:requestId/method", procurementController.startJob);
 
 // POST /procurement/:jobId/suppliers -> selects suppliers
 router.post("/:jobId/suppliers", procurementController.selectSuppliers);

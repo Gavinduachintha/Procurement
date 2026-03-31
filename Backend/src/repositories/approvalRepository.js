@@ -59,6 +59,17 @@ export const approvalRepository = {
        ORDER BY pr.updated_at DESC`,
       [approverId],
     );
+    console.log(
+      "🔍 Backend: Querying pending approvals for approver:",
+      approverId,
+    );
+    console.log("✅ Backend: Found", rows.length, "pending approvals");
+    if (rows.length > 0) {
+      console.log("📋 Backend: First pending approval:", {
+        requestId: rows[0].request_id,
+        status: rows[0].status,
+      });
+    }
     return rows;
   },
 };
