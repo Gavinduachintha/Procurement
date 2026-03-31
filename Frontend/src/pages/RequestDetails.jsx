@@ -196,8 +196,9 @@ export default function RequestDetails({ user }) {
         </div>
       </Card>
 
-      {request.status === "SPEC_CHECKED" &&
-        request.requested_by === user?.id && (
+      {(request.status === "SPEC_CHECKED" ||
+        request.status === "SPEC_RETURNED_TO_REQUESTER") &&
+        request.requester_id === user?.id && (
           <Card className="action-card">
             <div className="detail-section">
               <h2>Specification Review Complete</h2>

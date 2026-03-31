@@ -34,6 +34,11 @@
   color: #2c3e50;
 }
 
+.detail-section p {
+  color: #34495e;
+  line-height: 1.6;
+}
+
 .detail-row {
   display: flex;
   justify-content: space-between;
