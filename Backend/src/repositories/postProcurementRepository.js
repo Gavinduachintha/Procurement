@@ -537,7 +537,13 @@ export const postProcurementRepository = {
     return rows[0] || null;
   },
 
-  async quarterlyReport({ year, quarter, department, procurementMethod, status }) {
+  async quarterlyReport({
+    year,
+    quarter,
+    department,
+    procurementMethod,
+    status,
+  }) {
     const where = ["EXTRACT(YEAR FROM j.created_at) = $1"];
     const values = [year];
 
@@ -563,10 +569,14 @@ export const postProcurementRepository = {
 
     const clause = where.join(" AND ");
 
-    const [{ rows: totals }, { rows: byMethod }, { rows: bySupplier }, { rows: byDepartment }] =
-      await Promise.all([
-        query(
-          `SELECT
+    const [
+      { rows: totals },
+      { rows: byMethod },
+      { rows: bySupplier },
+      { rows: byDepartment },
+    ] = await Promise.all([
+      query(
+        `SELECT
              COUNT(*)::int AS total_jobs,
              COUNT(*) FILTER (WHERE j.status = 'COMMITTEE_APPROVED' OR j.status = 'PURCHASE_ORDER_GENERATED' OR j.status = 'DELIVERED' OR j.status = 'ACCEPTED' OR j.status = 'PAYMENT_VOUCHER_GENERATED')::int AS approved_jobs,
              COUNT(*) FILTER (WHERE j.status = 'PAYMENT_VOUCHER_GENERATED')::int AS completed_jobs,
@@ -575,19 +585,19 @@ export const postProcurementRepository = {
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            WHERE ${clause}`,
-          values,
-        ),
-        query(
-          `SELECT j.procurement_method, COUNT(*)::int AS jobs, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT j.procurement_method, COUNT(*)::int AS jobs, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            WHERE ${clause}
            GROUP BY j.procurement_method
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT s.name AS supplier_name, COALESCE(SUM(po.total_amount), 0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT s.name AS supplier_name, COALESCE(SUM(po.total_amount), 0)::numeric(14,2) AS total_amount
            FROM purchase_orders po
            JOIN suppliers s ON s.id = po.supplier_id
            JOIN jobs j ON j.id = po.job_id
@@ -595,18 +605,18 @@ export const postProcurementRepository = {
            WHERE ${clause}
            GROUP BY s.name
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT pr.department, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount, COUNT(*)::int AS jobs
+        values,
+      ),
+      query(
+        `SELECT pr.department, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount, COUNT(*)::int AS jobs
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            WHERE ${clause}
            GROUP BY pr.department
            ORDER BY total_amount DESC`,
-          values,
-        ),
-      ]);
+        values,
+      ),
+    ]);
 
     return {
       summary: totals[0] || {},
@@ -616,7 +626,14 @@ export const postProcurementRepository = {
     };
   },
 
-  async annualReport({ year, department, procurementMethod, fundingSource, supplier, status }) {
+  async annualReport({
+    year,
+    department,
+    procurementMethod,
+    fundingSource,
+    supplier,
+    status,
+  }) {
     const where = ["EXTRACT(YEAR FROM j.created_at) = $1"];
     const values = [year];
 
@@ -647,20 +664,26 @@ export const postProcurementRepository = {
 
     const clause = where.join(" AND ");
 
-    const [{ rows: totals }, { rows: byFunding }, { rows: byDepartment }, { rows: byMethod }, { rows: bySupplier }, { rows: paymentVoucherSummary }] =
-      await Promise.all([
-        query(
-          `SELECT COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS annual_total_procurement_value,
+    const [
+      { rows: totals },
+      { rows: byFunding },
+      { rows: byDepartment },
+      { rows: byMethod },
+      { rows: bySupplier },
+      { rows: paymentVoucherSummary },
+    ] = await Promise.all([
+      query(
+        `SELECT COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS annual_total_procurement_value,
                   COUNT(*)::int AS total_jobs
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            LEFT JOIN purchase_orders po ON po.job_id = j.id
            LEFT JOIN suppliers s ON s.id = po.supplier_id
            WHERE ${clause}`,
-          values,
-        ),
-        query(
-          `SELECT pr.funding_source, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT pr.funding_source, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            LEFT JOIN purchase_orders po ON po.job_id = j.id
@@ -668,10 +691,10 @@ export const postProcurementRepository = {
            WHERE ${clause}
            GROUP BY pr.funding_source
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT pr.department, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT pr.department, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            LEFT JOIN purchase_orders po ON po.job_id = j.id
@@ -679,10 +702,10 @@ export const postProcurementRepository = {
            WHERE ${clause}
            GROUP BY pr.department
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT j.procurement_method, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT j.procurement_method, COALESCE(SUM(j.total_amount),0)::numeric(14,2) AS total_amount
            FROM jobs j
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            LEFT JOIN purchase_orders po ON po.job_id = j.id
@@ -690,10 +713,10 @@ export const postProcurementRepository = {
            WHERE ${clause}
            GROUP BY j.procurement_method
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT s.name AS supplier_name, COALESCE(SUM(po.total_amount),0)::numeric(14,2) AS total_amount
+        values,
+      ),
+      query(
+        `SELECT s.name AS supplier_name, COALESCE(SUM(po.total_amount),0)::numeric(14,2) AS total_amount
            FROM purchase_orders po
            JOIN suppliers s ON s.id = po.supplier_id
            JOIN jobs j ON j.id = po.job_id
@@ -701,10 +724,10 @@ export const postProcurementRepository = {
            WHERE ${clause}
            GROUP BY s.name
            ORDER BY total_amount DESC`,
-          values,
-        ),
-        query(
-          `SELECT COUNT(*)::int AS payment_voucher_count,
+        values,
+      ),
+      query(
+        `SELECT COUNT(*)::int AS payment_voucher_count,
                   COALESCE(SUM(pv.payable_amount),0)::numeric(14,2) AS payment_voucher_total
            FROM payment_vouchers pv
            JOIN purchase_orders po ON po.id = pv.purchase_order_id
@@ -712,9 +735,9 @@ export const postProcurementRepository = {
            JOIN purchase_requests pr ON pr.id = j.purchase_request_id
            LEFT JOIN suppliers s ON s.id = po.supplier_id
            WHERE ${clause}`,
-          values,
-        ),
-      ]);
+        values,
+      ),
+    ]);
 
     return {
       summary: totals[0] || {},

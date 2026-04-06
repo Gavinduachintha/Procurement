@@ -58,17 +58,22 @@ const buildCommitteeReport = (recommendations) => {
   const supplierTotalsMap = new Map();
   for (const row of rows) {
     const key = `${row.supplierId}:${row.supplierName}`;
-    supplierTotalsMap.set(key, (supplierTotalsMap.get(key) || 0) + row.totalPrice);
+    supplierTotalsMap.set(
+      key,
+      (supplierTotalsMap.get(key) || 0) + row.totalPrice,
+    );
   }
 
-  const supplierTotals = [...supplierTotalsMap.entries()].map(([key, total]) => {
-    const [supplierId, supplierName] = key.split(":");
-    return {
-      supplierId: Number(supplierId),
-      supplierName,
-      totalAmount: Number(total.toFixed(2)),
-    };
-  });
+  const supplierTotals = [...supplierTotalsMap.entries()].map(
+    ([key, total]) => {
+      const [supplierId, supplierName] = key.split(":");
+      return {
+        supplierId: Number(supplierId),
+        supplierName,
+        totalAmount: Number(total.toFixed(2)),
+      };
+    },
+  );
 
   const totalAmount = Number(
     supplierTotals.reduce((sum, row) => sum + row.totalAmount, 0).toFixed(2),
@@ -248,10 +253,14 @@ export const postProcurementService = {
       ? JOB_STATUS.PENDING_MINOR_COMMITTEE_APPROVAL
       : JOB_STATUS.PENDING_MAJOR_COMMITTEE_APPROVAL;
 
-    const updated = await postProcurementRepository.updateJobStatus(jobId, status, {
-      committeeType: report.committee_type,
-      totalAmount: report.total_amount,
-    });
+    const updated = await postProcurementRepository.updateJobStatus(
+      jobId,
+      status,
+      {
+        committeeType: report.committee_type,
+        totalAmount: report.total_amount,
+      },
+    );
 
     await notificationService.notifyByRoles(
       [isMinor ? USER_ROLES.MINOR_COMMITTEE : USER_ROLES.MAJOR_COMMITTEE],
@@ -294,7 +303,9 @@ export const postProcurementService = {
       throw new ApiError(403, `Only ${expectedRole} can decide this job`);
     }
 
-    const decision = String(payload.decision || "").trim().toUpperCase();
+    const decision = String(payload.decision || "")
+      .trim()
+      .toUpperCase();
     if (!Object.values(COMMITTEE_DECISION).includes(decision)) {
       throw new ApiError(400, "Invalid committee decision");
     }
@@ -333,7 +344,10 @@ export const postProcurementService = {
 
   async generatePurchaseOrders(user, jobId, payload) {
     if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
-      throw new ApiError(403, "Only supply branch can generate purchase orders");
+      throw new ApiError(
+        403,
+        "Only supply branch can generate purchase orders",
+      );
     }
 
     const job = await postProcurementRepository.findJobContext(jobId);
@@ -341,7 +355,8 @@ export const postProcurementService = {
       throw new ApiError(404, "Job not found");
     }
 
-    const decision = await postProcurementRepository.getCommitteeDecision(jobId);
+    const decision =
+      await postProcurementRepository.getCommitteeDecision(jobId);
     if (!decision || decision.decision !== COMMITTEE_DECISION.APPROVED) {
       throw new ApiError(
         400,
@@ -433,22 +448,30 @@ export const postProcurementService = {
       throw new ApiError(404, "Invalid or expired confirmation token");
     }
 
-    const quantityDelivered = Number(payload.quantityDelivered || data.quantity);
+    const quantityDelivered = Number(
+      payload.quantityDelivered || data.quantity,
+    );
     if (!Number.isFinite(quantityDelivered) || quantityDelivered <= 0) {
       throw new ApiError(400, "quantityDelivered must be greater than zero");
     }
 
-    const acceptanceStatus = payload.accepted ? JOB_STATUS.ACCEPTED : JOB_STATUS.DELIVERED;
+    const acceptanceStatus = payload.accepted
+      ? JOB_STATUS.ACCEPTED
+      : JOB_STATUS.DELIVERED;
 
     await postProcurementRepository.confirmDeliveryByToken(token, {
       confirmedByUserId: payload.confirmedByUserId,
       quantityDelivered,
-      deliveryDate: payload.deliveryDate || new Date().toISOString().slice(0, 10),
+      deliveryDate:
+        payload.deliveryDate || new Date().toISOString().slice(0, 10),
       remarks: payload.remarks,
       acceptanceStatus,
     });
 
-    await postProcurementRepository.updateJobStatus(data.job_id, acceptanceStatus);
+    await postProcurementRepository.updateJobStatus(
+      data.job_id,
+      acceptanceStatus,
+    );
 
     return {
       jobId: data.job_id,
@@ -461,10 +484,14 @@ export const postProcurementService = {
     if (
       ![USER_ROLES.SUPPLY_BRANCH, USER_ROLES.SUBJECT_CLERK].includes(user.role)
     ) {
-      throw new ApiError(403, "Only supply branch or subject clerk can generate delivery note");
+      throw new ApiError(
+        403,
+        "Only supply branch or subject clerk can generate delivery note",
+      );
     }
 
-    const po = await postProcurementRepository.getPurchaseOrderById(purchaseOrderId);
+    const po =
+      await postProcurementRepository.getPurchaseOrderById(purchaseOrderId);
     if (!po) {
       throw new ApiError(404, "Purchase order not found");
     }
@@ -479,7 +506,10 @@ export const postProcurementService = {
       supplierName: po.supplier_name,
       department: po.requesting_department,
       itemName: po.item_name,
-      quantityDelivered: payload.quantityDelivered || delivery?.quantity_delivered || po.quantity,
+      quantityDelivered:
+        payload.quantityDelivered ||
+        delivery?.quantity_delivered ||
+        po.quantity,
       deliveryDate:
         payload.deliveryDate ||
         delivery?.delivery_date ||
@@ -506,14 +536,16 @@ export const postProcurementService = {
       throw new ApiError(403, "Not authorized to generate payment voucher");
     }
 
-    const po = await postProcurementRepository.getPurchaseOrderById(purchaseOrderId);
+    const po =
+      await postProcurementRepository.getPurchaseOrderById(purchaseOrderId);
     if (!po) {
       throw new ApiError(404, "Purchase order not found");
     }
 
-    const note = await postProcurementRepository.getDeliveryNoteByPurchaseOrderId(
-      purchaseOrderId,
-    );
+    const note =
+      await postProcurementRepository.getDeliveryNoteByPurchaseOrderId(
+        purchaseOrderId,
+      );
 
     const voucher = await postProcurementRepository.createPaymentVoucher({
       purchaseOrderId,
