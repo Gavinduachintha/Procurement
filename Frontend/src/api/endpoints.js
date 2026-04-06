@@ -14,7 +14,7 @@ export const requestApi = {
   list: (params) => api.get("/requests", { params }),
   get: (id) => api.get(`/requests/${id}`),
   confirmSpecification: (id, data) =>
-    api.post(`/requests/${id}/confirm-specification`, data),
+    api.post(`/specifications/${id}/requester-confirmation`, data),
 };
 
 export const specificationApi = {
@@ -23,21 +23,55 @@ export const specificationApi = {
 };
 
 export const approvalApi = {
-  listPending: (params) => api.get("/approvals", { params }),
-  approve: (id, data) => api.post(`/approvals/${id}/approve`, data),
-  reject: (id, data) => api.post(`/approvals/${id}/reject`, data),
-  requestClarification: (id, data) =>
-    api.post(`/approvals/${id}/clarification`, data),
+  listPending: () => api.get("/approvals/mine/pending"),
+  decide: (id, data) => api.post(`/approvals/${id}/decision`, data),
 };
 
 export const procurementApi = {
-  getJobs: (params) => api.get("/procurement/jobs", { params }),
-  startJob: (id, data) => api.post(`/procurement/${id}/start-job`, data),
+  getJobs: () => api.get("/dashboard/supply-branch"),
+  getApprovedWithoutJobs: () => api.get("/requests/approved/without-jobs"),
+  startJob: (id, data) => api.post(`/procurement/${id}/method`, data),
   selectMethod: (id, data) => api.post(`/procurement/${id}/method`, data),
   selectSuppliers: (id, data) => api.post(`/procurement/${id}/suppliers`, data),
-  selectCategory: (id, data) => api.post(`/procurement/${id}/category`, data),
-  generateLetters: (id) => api.get(`/procurement/${id}/letters`),
-  getSchedule: (id) => api.get(`/procurement/${id}/schedule`),
+  selectCategory: (id, data) =>
+    api.post(`/procurement/jobs/${id}/select-category`, data),
+  generateLetters: (id, data) =>
+    api.post(`/procurement/jobs/${id}/generate-letters`, data),
+  getSchedule: (id) => api.get(`/procurement/jobs/${id}/schedule`),
+};
+
+export const postProcurementApi = {
+  sendToTec: (jobId) => api.post(`/post-procurement/jobs/${jobId}/send-to-tec`),
+  enterTecDecisions: (jobId, data) =>
+    api.post(`/post-procurement/jobs/${jobId}/tec-decisions`, data),
+  getCommitteeReport: (jobId) =>
+    api.get(`/post-procurement/jobs/${jobId}/committee-report`),
+  routeCommittee: (jobId) =>
+    api.post(`/post-procurement/jobs/${jobId}/route-committee`),
+  committeeDecision: (jobId, data) =>
+    api.post(`/post-procurement/jobs/${jobId}/committee-decision`, data),
+  generatePurchaseOrders: (jobId, data) =>
+    api.post(`/post-procurement/jobs/${jobId}/purchase-orders`, data),
+  listPurchaseOrders: (jobId) =>
+    api.get(`/post-procurement/jobs/${jobId}/purchase-orders`),
+  getDeliveryByToken: (token) =>
+    api.get(`/post-procurement/delivery/confirm/${token}`),
+  confirmDeliveryByToken: (token, data) =>
+    api.post(`/post-procurement/delivery/confirm/${token}`, data),
+  generateDeliveryNote: (purchaseOrderId, data) =>
+    api.post(
+      `/post-procurement/purchase-orders/${purchaseOrderId}/delivery-note`,
+      data,
+    ),
+  generatePaymentVoucher: (purchaseOrderId, data) =>
+    api.post(
+      `/post-procurement/purchase-orders/${purchaseOrderId}/payment-voucher`,
+      data,
+    ),
+  quarterlyReport: (params) =>
+    api.get("/post-procurement/reports/quarterly", { params }),
+  annualReport: (params) =>
+    api.get("/post-procurement/reports/annual", { params }),
 };
 
 export const supplierApi = {

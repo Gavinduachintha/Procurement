@@ -54,7 +54,15 @@ export default function Navigation({ user, onLogout }) {
       });
     }
 
-    if (user?.role === "SUPPLY_BRANCH" || user?.role === "SUBJECT_CLERK") {
+    if (
+      [
+        "SUPPLY_BRANCH",
+        "SUBJECT_CLERK",
+        "MINOR_COMMITTEE",
+        "MAJOR_COMMITTEE",
+        "FINANCE_OFFICER",
+      ].includes(user?.role)
+    ) {
       links.push({
         to: "/supply-branch",
         label: "Procurement",

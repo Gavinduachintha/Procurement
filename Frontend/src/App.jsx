@@ -14,6 +14,7 @@ import SpecificationReview from "./pages/SpecificationReview";
 import ApprovalDashboard from "./pages/ApprovalDashboard";
 import SupplyBranchDashboard from "./pages/SupplyBranchDashboard";
 import RequestDetails from "./pages/RequestDetails";
+import DeliveryConfirmation from "./pages/DeliveryConfirmation";
 import "./App.css";
 
 function App() {
@@ -51,6 +52,10 @@ function App() {
   return (
     <Router>
       <Routes>
+        <Route
+          path="/delivery/confirm/:token"
+          element={<DeliveryConfirmation />}
+        />
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Register setUser={setUser} />} />
 

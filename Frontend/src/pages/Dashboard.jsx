@@ -33,10 +33,15 @@ export default function Dashboard({ user }) {
       ) {
         endpoint = "/requests/assigned/specification"; // Specifications to review
       } else if (
-        user?.role === "SUPPLY_BRANCH" ||
-        user?.role === "SUBJECT_CLERK"
+        [
+          "SUPPLY_BRANCH",
+          "SUBJECT_CLERK",
+          "MINOR_COMMITTEE",
+          "MAJOR_COMMITTEE",
+          "FINANCE_OFFICER",
+        ].includes(user?.role)
       ) {
-        endpoint = "/requests/approved/without-jobs"; // Jobs to process
+        endpoint = "/dashboard/supply-branch"; // Procurement jobs
       }
 
       console.log(
@@ -116,6 +121,21 @@ export default function Dashboard({ user }) {
       CLARIFICATION_REQUESTED: "badge-warning",
       IN_PROCUREMENT: "badge-info",
       COMPLETED: "badge-success",
+      JOB_CREATED: "badge-info",
+      CLERK_ASSIGNED: "badge-info",
+      CATEGORY_SELECTED: "badge-warning",
+      PENDING_TEC_DECISION: "badge-warning",
+      TEC_DECISION_ENTERED: "badge-info",
+      PENDING_MINOR_COMMITTEE_APPROVAL: "badge-warning",
+      PENDING_MAJOR_COMMITTEE_APPROVAL: "badge-warning",
+      COMMITTEE_APPROVED: "badge-success",
+      COMMITTEE_REJECTED: "badge-danger",
+      COMMITTEE_CLARIFICATION_REQUESTED: "badge-warning",
+      COMMITTEE_AMENDMENT_REQUESTED: "badge-warning",
+      PURCHASE_ORDER_GENERATED: "badge-info",
+      DELIVERED: "badge-info",
+      ACCEPTED: "badge-success",
+      PAYMENT_VOUCHER_GENERATED: "badge-success",
     };
     return statuses[status] || "badge-info";
   };
@@ -167,14 +187,14 @@ export default function Dashboard({ user }) {
                   <td>
                     <strong>{req.id}</strong>
                   </td>
-                  <td>{req.item_name}</td>
-                  <td>{req.department}</td>
+                  <td>{req.item_name || req.request_id || "-"}</td>
+                  <td>{req.department || "-"}</td>
                   <td>
                     <span className={`badge ${getStatusBadge(req.status)}`}>
-                      {req.status}
+                      {req.status || req.request_status || "-"}
                     </span>
                   </td>
-                  <td>${req.estimated_cost}</td>
+                  <td>${req.estimated_cost || req.total_amount || "0.00"}</td>
                   <td>
                     <Link
                       to={`/request/${req.id}`}

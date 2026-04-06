@@ -1,0 +1,24 @@
+.delivery-confirmation-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.delivery-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.confirmation-choice {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.confirmation-choice label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}

@@ -23,6 +23,11 @@
   color: #7f8c8d;
 }
 
+.empty-note {
+  color: #7f8c8d;
+  margin: 0.5rem 0;
+}
+
 .loading-state {
   text-align: center;
   padding: 2rem;
@@ -32,12 +37,29 @@
 .action-buttons {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.job-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.section-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
 }
 
 .modal-content {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.suppliers-list {
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 .suppliers-list {
@@ -84,7 +106,73 @@
   border-top: 1px solid #ecf0f1;
 }
 
+.tec-list {
+  max-height: 55vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tec-row {
+  background-color: #f8f9fa;
+  border: 1px solid #ecf0f1;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.tec-row h4 {
+  margin: 0 0 0.75rem 0;
+}
+
+.report-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.report-block {
+  margin-top: 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #ecf0f1;
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.report-block pre,
+.report-json {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+}
+
+.po-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.po-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
 @media (max-width: 768px) {
+  .job-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .po-row {
+    flex-direction: column;
+  }
+
   .action-buttons {
     flex-direction: column;
   }
