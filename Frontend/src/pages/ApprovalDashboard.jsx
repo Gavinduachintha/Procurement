@@ -66,13 +66,16 @@ export default function ApprovalDashboard({ user }) {
     <div className="approval-dashboard">
       <div className="page-header">
         <h1>Approval Dashboard (View Only)</h1>
-        <p>Receive notifications and view requests. No approval action required.</p>
+        <p>
+          Receive notifications and view requests. No approval action required.
+        </p>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
 
       <Alert type="info">
-        Manual approvals are disabled for DEAN / REGISTRAR / BURSAR / VICE_CHANCELLOR.
+        Manual approvals are disabled for DEAN / REGISTRAR / BURSAR /
+        VICE_CHANCELLOR.
       </Alert>
 
       {requests.length === 0 ? (
