@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS jobs (
   UNIQUE (procurement_method, year, serial_number)
 );
 
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS committee_type TEXT;
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_amount NUMERIC(14,2);
+
 CREATE TABLE IF NOT EXISTS suppliers (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -106,4 +109,102 @@ CREATE TABLE IF NOT EXISTS notifications (
   message TEXT NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS tec_recommendations (
+  id BIGSERIAL PRIMARY KEY,
+  job_id BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  supplier_id BIGINT NOT NULL REFERENCES suppliers(id),
+  item_name TEXT NOT NULL,
+  item_description TEXT,
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  unit_price NUMERIC(14,2) NOT NULL CHECK (unit_price >= 0),
+  decision_status TEXT NOT NULL CHECK (decision_status IN ('RECOMMENDED', 'REJECTED', 'RECALL', 'CALL_SAMPLE', 'NOT_QUOTED')),
+  is_recommended BOOLEAN NOT NULL DEFAULT FALSE,
+  remarks TEXT,
+  created_by BIGINT REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS committee_reports (
+  id BIGSERIAL PRIMARY KEY,
+  job_id BIGINT NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,
+  report_data JSONB NOT NULL,
+  total_amount NUMERIC(14,2) NOT NULL CHECK (total_amount >= 0),
+  committee_type TEXT NOT NULL CHECK (committee_type IN ('MINOR', 'MAJOR')),
+  generated_by BIGINT REFERENCES users(id),
+  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS committee_decisions (
+  id BIGSERIAL PRIMARY KEY,
+  job_id BIGINT NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,
+  committee_type TEXT NOT NULL CHECK (committee_type IN ('MINOR', 'MAJOR')),
+  decision TEXT NOT NULL CHECK (decision IN ('APPROVED', 'REJECTED', 'CLARIFICATION_REQUESTED', 'RECOMMEND_AMENDMENT')),
+  remarks TEXT,
+  decided_by BIGINT REFERENCES users(id),
+  decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+  id BIGSERIAL PRIMARY KEY,
+  job_id BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+  supplier_id BIGINT NOT NULL REFERENCES suppliers(id),
+  po_number TEXT NOT NULL UNIQUE,
+  year INTEGER NOT NULL,
+  serial_number INTEGER NOT NULL,
+  delivery_location TEXT NOT NULL,
+  requesting_department TEXT NOT NULL,
+  item_name TEXT NOT NULL,
+  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  unit_price NUMERIC(14,2) NOT NULL CHECK (unit_price >= 0),
+  total_amount NUMERIC(14,2) NOT NULL CHECK (total_amount >= 0),
+  delivery_deadline DATE,
+  payment_terms TEXT,
+  status TEXT NOT NULL DEFAULT 'PO_GENERATED',
+  issued_by BIGINT REFERENCES users(id),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (job_id, supplier_id),
+  UNIQUE (year, serial_number)
+);
+
+CREATE TABLE IF NOT EXISTS delivery_confirmations (
+  id BIGSERIAL PRIMARY KEY,
+  purchase_order_id BIGINT NOT NULL UNIQUE REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  confirmation_token TEXT NOT NULL UNIQUE,
+  confirmed_by_user_id BIGINT REFERENCES users(id),
+  quantity_delivered INTEGER,
+  delivery_date DATE,
+  remarks TEXT,
+  acceptance_status TEXT CHECK (acceptance_status IN ('DELIVERED', 'ACCEPTED')),
+  confirmed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS delivery_notes (
+  id BIGSERIAL PRIMARY KEY,
+  purchase_order_id BIGINT NOT NULL UNIQUE REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  note_number TEXT NOT NULL UNIQUE,
+  year INTEGER NOT NULL,
+  serial_number INTEGER NOT NULL,
+  note_content JSONB NOT NULL,
+  created_by BIGINT REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (year, serial_number)
+);
+
+CREATE TABLE IF NOT EXISTS payment_vouchers (
+  id BIGSERIAL PRIMARY KEY,
+  purchase_order_id BIGINT NOT NULL UNIQUE REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  voucher_number TEXT NOT NULL UNIQUE,
+  year INTEGER NOT NULL,
+  serial_number INTEGER NOT NULL,
+  invoice_reference TEXT,
+  delivery_note_reference TEXT,
+  payable_amount NUMERIC(14,2) NOT NULL CHECK (payable_amount >= 0),
+  department TEXT NOT NULL,
+  voucher_date DATE NOT NULL,
+  created_by BIGINT REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (year, serial_number)
 );

@@ -69,22 +69,22 @@ export const specificationService = {
 
       console.log("✅ Backend: Specification review saved");
 
-      // Directly approve and send to Supply Branch (no requester confirmation needed)
-      const updated = await requestRepository.updateStatus(
+      const updated = await requestRepository.updateSpecificationReviewResult(
         request.id,
-        REQUEST_STATUS.APPROVED,
+        reviewData.reviewedSpecifications,
+        REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
       );
 
       console.log(
-        "✅ Backend: Request status updated directly to APPROVED (going to Supply Branch)",
+        "✅ Backend: Request status updated to SPEC_RETURNED_TO_REQUESTER",
       );
 
       // Notify Requesting Officer
       console.log("📧 Backend: Notifying requesting officer...");
       await notificationService.notifyUsers([request.requester_id], {
-        eventType: "SPEC_APPROVED",
-        subject: `Specifications approved (${request.request_id})`,
-        message: `Your specification for ${request.request_id} has been approved and is now going to Supply Branch for procurement.`,
+        eventType: "SPEC_REVIEWED",
+        subject: `Specification reviewed (${request.request_id})`,
+        message: `Specifications for ${request.request_id} were reviewed. Please confirm or request modification.`,
       });
       console.log("✅ Backend: Requesting officer notified");
 
@@ -119,9 +119,9 @@ export const specificationService = {
           const stakeholderIds = stakeholders.map((s) => s.id);
           console.log("📧 Backend: Notifying stakeholder IDs:", stakeholderIds);
           await notificationService.notifyUsers(stakeholderIds, {
-            eventType: "REQUEST_APPROVED_FOR_PROCUREMENT",
-            subject: `Request approved for procurement (${request.request_id})`,
-            message: `Request ${request.request_id} has been approved for procurement. Supply Branch will now handle the procurement process.`,
+            eventType: "REQUEST_WAITING_REQUESTER_CONFIRMATION",
+            subject: `Requester confirmation pending (${request.request_id})`,
+            message: `Request ${request.request_id} is waiting for requester confirmation after specification review.`,
           });
           console.log("✅ Backend: Stakeholders notified");
         }
@@ -145,9 +145,9 @@ export const specificationService = {
             supplyBranchIds,
           );
           await notificationService.notifyUsers(supplyBranchIds, {
-            eventType: "NEW_PROCUREMENT_REQUEST",
-            subject: `New request ready for procurement (${request.request_id})`,
-            message: `Request ${request.request_id} is now ready for procurement. Please create procurement jobs.`,
+            eventType: "REQUEST_IN_SPEC_CONFIRMATION",
+            subject: `Request not yet ready for procurement (${request.request_id})`,
+            message: `Request ${request.request_id} completed specification review and now waits for requester confirmation.`,
           });
           console.log("✅ Backend: Supply branch notified");
         }
