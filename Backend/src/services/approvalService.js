@@ -1,106 +1,17 @@
 import { approvalRepository } from "../repositories/approvalRepository.js";
-import { requestRepository } from "../repositories/requestRepository.js";
 import { ApiError } from "../utils/apiError.js";
-import { APPROVER_ROLES, REQUEST_STATUS } from "../utils/constants.js";
-import { notificationService } from "./notificationService.js";
+import { APPROVER_ROLES } from "../utils/constants.js";
 
 export const approvalService = {
-  async decide(user, requestId, payload) {
-    console.log("📝 Backend: Approval decision initiated");
-    console.log("📋 Backend: User:", { id: user.id, role: user.role });
-    console.log("📋 Backend: Request ID:", requestId);
-    console.log("📋 Backend: Payload:", payload);
-
+  async decide(user) {
     if (!APPROVER_ROLES.includes(user.role)) {
-      console.log("❌ Backend: User role not in approver roles:", user.role);
-      throw new ApiError(403, "Only approval officials can make this decision");
+      throw new ApiError(403, "Only approval officials can access this area");
     }
 
-    const request = await requestRepository.findById(requestId);
-    console.log("📋 Backend: Found request:", {
-      id: request?.id,
-      requestId: request?.request_id,
-      status: request?.status,
-    });
-
-    if (!request) {
-      throw new ApiError(404, "Request not found");
-    }
-
-    if (
-      ![
-        REQUEST_STATUS.APPROVAL_PENDING,
-        REQUEST_STATUS.CLARIFICATION_REQUESTED,
-      ].includes(request.status)
-    ) {
-      console.log(
-        "❌ Backend: Request not in approval state. Status:",
-        request.status,
-      );
-      throw new ApiError(400, "Request is not in approval state");
-    }
-
-    const decision = payload.decision;
-    console.log("📋 Backend: Decision:", decision);
-
-    if (
-      !["APPROVED", "REJECTED", "CLARIFICATION_REQUESTED"].includes(decision)
-    ) {
-      throw new ApiError(400, "Invalid decision");
-    }
-
-    console.log("📝 Backend: Approval decision initiated");
-    console.log("📋 Backend: Decision payload:", {
-      requestId: request.id,
-      decision: decision,
-      approverId: user.id,
-      comments: payload.notes || payload.comments,
-    });
-
-    const updatedApproval = await approvalRepository.decide({
-      purchaseRequestId: request.id,
-      approverId: user.id,
-      decision,
-      comments: payload.notes || payload.comments,
-    });
-
-    console.log("✅ Backend: Approval decision recorded");
-
-    if (!updatedApproval) {
-      throw new ApiError(404, "Approval slot not found for this approver");
-    }
-
-    const summary = await approvalRepository.getApprovalSummary(request.id);
-
-    let nextStatus = REQUEST_STATUS.APPROVAL_PENDING;
-
-    if (Number(summary.rejected_count) > 0) {
-      nextStatus = REQUEST_STATUS.REJECTED;
-    } else if (Number(summary.clarification_count) > 0) {
-      nextStatus = REQUEST_STATUS.CLARIFICATION_REQUESTED;
-    } else if (Number(summary.approved_count) === Number(summary.total_count)) {
-      nextStatus = REQUEST_STATUS.APPROVED;
-    }
-
-    console.log("📊 Backend: Approval summary:", summary);
-    console.log("📋 Backend: New status:", nextStatus);
-
-    const updatedRequest = await requestRepository.updateStatus(
-      request.id,
-      nextStatus,
+    throw new ApiError(
+      403,
+      "Manual approvals are disabled. Approver roles are view and notification only.",
     );
-
-    await notificationService.notifyUsers([request.requester_id], {
-      eventType: "APPROVAL_UPDATED",
-      subject: `Approval update (${request.request_id})`,
-      message: `Approval decision recorded for ${request.request_id}. Current status: ${nextStatus}.`,
-    });
-
-    return {
-      request: updatedRequest,
-      approval: updatedApproval,
-      summary,
-    };
   },
 
   async myPending(userId) {

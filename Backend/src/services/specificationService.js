@@ -2,7 +2,7 @@ import { requestRepository } from "../repositories/requestRepository.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { specificationRepository } from "../repositories/specificationRepository.js";
 import { ApiError } from "../utils/apiError.js";
-import { REQUEST_STATUS, USER_ROLES } from "../utils/constants.js";
+import { APPROVER_ROLES, REQUEST_STATUS, USER_ROLES } from "../utils/constants.js";
 import { notificationService } from "./notificationService.js";
 
 export const specificationService = {
@@ -215,15 +215,27 @@ export const specificationService = {
     if (action === "ACCEPT") {
       const updated = await requestRepository.updateStatus(
         request.id,
-        REQUEST_STATUS.APPROVAL_PENDING,
+        REQUEST_STATUS.APPROVED,
       );
 
-      console.log("✅ Backend: Request status updated to APPROVAL_PENDING");
+      console.log("✅ Backend: Request status updated to APPROVED");
 
       await notificationService.notifyUsers([request.requester_id], {
         eventType: "SPEC_CONFIRMED",
         subject: `Specification accepted (${request.request_id})`,
-        message: `Request ${request.request_id} moved to administrative approvals.`,
+        message: `Request ${request.request_id} is approved and ready for procurement.`,
+      });
+
+      await notificationService.notifyByRoles(APPROVER_ROLES, {
+        eventType: "REQUEST_APPROVED_VIEW_ONLY",
+        subject: `Request available for view (${request.request_id})`,
+        message: `Request ${request.request_id} has been approved. You can view request details and notifications (no action required).`,
+      });
+
+      await notificationService.notifyByRoles([USER_ROLES.SUPPLY_BRANCH], {
+        eventType: "REQUEST_READY_FOR_PROCUREMENT",
+        subject: `Request ready for procurement (${request.request_id})`,
+        message: `Request ${request.request_id} is approved and ready for procurement workflow.`,
       });
 
       return updated;
