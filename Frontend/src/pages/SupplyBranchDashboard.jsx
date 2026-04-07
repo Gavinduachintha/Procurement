@@ -89,7 +89,6 @@ export default function SupplyBranchDashboard({ user }) {
   );
   const canViewReports = [
     "SUPPLY_BRANCH",
-    "SUBJECT_CLERK",
     "MINOR_COMMITTEE",
     "MAJOR_COMMITTEE",
     "FINANCE_OFFICER",
