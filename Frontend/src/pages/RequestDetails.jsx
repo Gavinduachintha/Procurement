@@ -12,6 +12,7 @@ export default function RequestDetails({ user }) {
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,8 @@ export default function RequestDetails({ user }) {
     );
 
     setActionLoading(true);
+    setError("");
+    setSuccess("");
     try {
       console.log("📤 Sending confirmation request...");
 
@@ -64,8 +67,14 @@ export default function RequestDetails({ user }) {
 
       console.log("✅ Specification confirmed successfully");
 
-      setRequest((prev) => ({ ...prev, status: "APPROVAL_PENDING" }));
-      Alert.success = "Specification confirmed successfully";
+      const nextStatus =
+        action === "ACCEPT" ? "APPROVED" : "SPEC_REWORK_REQUESTED";
+      setRequest((prev) => ({ ...prev, status: nextStatus }));
+      setSuccess(
+        action === "ACCEPT"
+          ? "Specifications accepted. Request is now approved and ready for procurement."
+          : "Modification requested. The specification checker has been notified.",
+      );
     } catch (err) {
       const errorMsg =
         err.response?.data?.message || "Failed to confirm specification";
@@ -81,7 +90,6 @@ export default function RequestDetails({ user }) {
   };
 
   if (loading) return <div className="loading-state">Loading request...</div>;
-  if (error) return <Alert type="error">{error}</Alert>;
   if (!request) return <Alert type="error">Request not found</Alert>;
 
   const getStatusColor = (status) => {
@@ -94,6 +102,8 @@ export default function RequestDetails({ user }) {
       APPROVED: "#27ae60",
       REJECTED: "#e74c3c",
       CLARIFICATION_REQUESTED: "#f39c12",
+      SPEC_RETURNED_TO_REQUESTER: "#f39c12",
+      SPEC_REVIEW_PENDING: "#f39c12",
       IN_PROCUREMENT: "#3498db",
       COMPLETED: "#27ae60",
     };
@@ -108,6 +118,9 @@ export default function RequestDetails({ user }) {
         </Button>
         <h1>Request Details</h1>
       </div>
+
+      {error && <Alert type="error">{error}</Alert>}
+      {success && <Alert type="success">{success}</Alert>}
 
       <div className="details-grid">
         <Card>
@@ -209,6 +222,41 @@ export default function RequestDetails({ user }) {
           </div>
         </Card>
       )}
+
+      {request.status === "SPEC_RETURNED_TO_REQUESTER" &&
+        request.requester_id === user?.id && (
+          <Card className="action-card">
+            <div className="detail-section">
+              <h2>Specification Review Returned</h2>
+              <p>
+                The checker has reviewed your specifications. Choose one option
+                to continue.
+              </p>
+              {request.checked_specifications && (
+                <div style={{ marginBottom: "1rem" }}>
+                  <strong>Reviewed Specification:</strong>
+                  <p>{request.checked_specifications}</p>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+                <Button
+                  variant="success"
+                  onClick={() => handleConfirmSpecification("ACCEPT")}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Submitting..." : "Accept and Continue"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleConfirmSpecification("REQUEST_MODIFICATION")}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? "Submitting..." : "Request Modification"}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
     </div>
   );
 }
