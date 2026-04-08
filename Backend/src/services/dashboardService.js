@@ -1,5 +1,6 @@
 import { query } from "../config/db.js";
 import { jobRepository } from "../repositories/jobRepository.js";
+import { USER_ROLES } from "../utils/constants.js";
 
 export const dashboardService = {
   async requester(userId) {
@@ -24,7 +25,15 @@ export const dashboardService = {
     return rows;
   },
 
-  async supplyBranch() {
+  async supplyBranch(user) {
+    if (!user) {
+      return [];
+    }
+
+    if (user.role === USER_ROLES.SUBJECT_CLERK) {
+      return jobRepository.listByAssignedClerk(user.id);
+    }
+
     return jobRepository.listBySupplyBranchView();
   },
 };

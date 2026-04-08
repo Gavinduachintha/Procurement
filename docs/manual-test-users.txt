@@ -56,3 +56,27 @@ Use these for manual registration in the app.
    Password: Clerk@12345
    Role: SUBJECT_CLERK
    Department: Supply Branch
+
+10) Full Name: Thenu TEC
+   Email: thenu.tec@univ.edu
+   Password: Tec@12345
+   Role: TEC_MEMBER
+   Department: Technical Evaluation Committee
+
+11) Full Name: Nimal Minor Committee
+   Email: nimal.minor.committee@univ.edu
+   Password: Minor@12345
+   Role: MINOR_COMMITTEE
+   Department: Procurement Committee
+
+12) Full Name: Maya Major Committee
+   Email: maya.major.committee@univ.edu
+   Password: Major@12345
+   Role: MAJOR_COMMITTEE
+   Department: Procurement Committee
+
+13) Full Name: Fari Finance
+   Email: fari.finance@univ.edu
+   Password: Finance@12345
+   Role: FINANCE_OFFICER
+   Department: Finance

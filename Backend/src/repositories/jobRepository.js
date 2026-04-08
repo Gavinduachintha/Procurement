@@ -90,10 +90,26 @@ export const jobRepository = {
 
   async listBySupplyBranchView() {
     const { rows } = await query(
-      `SELECT j.*, pr.request_id, pr.item_name, pr.department, pr.status AS request_status
+      `SELECT j.*, pr.request_id, pr.item_name, pr.department, pr.status AS request_status,
+              u.full_name AS assigned_clerk_name
        FROM jobs j
        JOIN purchase_requests pr ON pr.id = j.purchase_request_id
+       LEFT JOIN users u ON u.id = j.assigned_clerk_id
        ORDER BY j.created_at DESC`,
+    );
+    return rows;
+  },
+
+  async listByAssignedClerk(clerkId) {
+    const { rows } = await query(
+      `SELECT j.*, pr.request_id, pr.item_name, pr.department, pr.status AS request_status,
+              u.full_name AS assigned_clerk_name
+       FROM jobs j
+       JOIN purchase_requests pr ON pr.id = j.purchase_request_id
+       LEFT JOIN users u ON u.id = j.assigned_clerk_id
+       WHERE j.assigned_clerk_id = $1
+       ORDER BY j.created_at DESC`,
+      [clerkId],
     );
     return rows;
   },

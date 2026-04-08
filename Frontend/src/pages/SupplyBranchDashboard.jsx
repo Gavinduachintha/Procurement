@@ -60,6 +60,8 @@ export default function SupplyBranchDashboard({ user }) {
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("");
+  const [subjectClerks, setSubjectClerks] = useState([]);
+  const [selectedClerkId, setSelectedClerkId] = useState("");
 
   const [tecRows, setTecRows] = useState([]);
   const [committeeReport, setCommitteeReport] = useState(null);
@@ -175,6 +177,50 @@ export default function SupplyBranchDashboard({ user }) {
     setSupplierOptions([]);
     setSelectedSuppliers([]);
     setIsModalOpen(true);
+  };
+
+  const openAssignClerkModal = async (job) => {
+    setSelectedJob(job);
+    setModalType("assign-clerk");
+    setSubjectClerks([]);
+    setSelectedClerkId(job.assigned_clerk_id ? String(job.assigned_clerk_id) : "");
+    setIsModalOpen(true);
+    setActionLoading(true);
+    setError("");
+
+    try {
+      const response = await api.get("/auth/users", {
+        params: { role: "SUBJECT_CLERK" },
+      });
+      const data = parseData(response);
+      setSubjectClerks(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load clerks");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const submitAssignClerk = async () => {
+    if (!selectedJob || !selectedClerkId) return;
+
+    setActionLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.post(`/procurement/jobs/${selectedJob.id}/assign-clerk`, {
+        clerkId: Number(selectedClerkId),
+      });
+
+      setSuccess("Subject clerk assigned successfully.");
+      setIsModalOpen(false);
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to assign clerk");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const loadSuppliersByCategory = async () => {
@@ -457,6 +503,9 @@ export default function SupplyBranchDashboard({ user }) {
         },
       );
       setSuccess("Delivery note generated.");
+      if (selectedJob) {
+        await openPurchaseOrdersList(selectedJob);
+      }
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to generate delivery note",
@@ -478,6 +527,9 @@ export default function SupplyBranchDashboard({ user }) {
         },
       );
       setSuccess("Payment voucher generated.");
+      if (selectedJob) {
+        await openPurchaseOrdersList(selectedJob);
+      }
       await loadData();
     } catch (err) {
       setError(
@@ -628,6 +680,7 @@ export default function SupplyBranchDashboard({ user }) {
                 <th>Request</th>
                 <th>Method</th>
                 <th>Status</th>
+                <th>Assigned Clerk</th>
                 <th>Total</th>
                 <th>Actions</th>
               </tr>
@@ -643,9 +696,20 @@ export default function SupplyBranchDashboard({ user }) {
                       {job.status}
                     </span>
                   </td>
+                  <td>{job.assigned_clerk_name || "Not assigned"}</td>
                   <td>${job.total_amount || "0.00"}</td>
                   <td>
                     <div className="job-action-grid">
+                      {canStartJobs && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openAssignClerkModal(job)}
+                        >
+                          Assign Clerk
+                        </Button>
+                      )}
+
                       {canManageWorkflow && (
                         <Button
                           size="sm"
@@ -804,6 +868,38 @@ export default function SupplyBranchDashboard({ user }) {
             disabled={!selectedMethod || actionLoading}
           >
             {actionLoading ? "Starting..." : "Start Job"}
+          </Button>
+          <Button variant="secondary" onClick={closeModal}>
+            Cancel
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isModalOpen && modalType === "assign-clerk"}
+        onClose={closeModal}
+        title="Assign Subject Clerk"
+      >
+        <p className="mb-2">
+          Job: <strong>{selectedJob?.job_number || `JOB-${selectedJob?.id}`}</strong>
+        </p>
+
+        <Select
+          label="Subject Clerk"
+          value={selectedClerkId}
+          onChange={(e) => setSelectedClerkId(e.target.value)}
+          options={subjectClerks.map((clerk) => ({
+            label: `${clerk.full_name} (${clerk.email})`,
+            value: String(clerk.id),
+          }))}
+        />
+
+        <div className="modal-actions">
+          <Button
+            onClick={submitAssignClerk}
+            disabled={!selectedClerkId || actionLoading}
+          >
+            {actionLoading ? "Assigning..." : "Assign Clerk"}
           </Button>
           <Button variant="secondary" onClick={closeModal}>
             Cancel
@@ -1039,6 +1135,15 @@ export default function SupplyBranchDashboard({ user }) {
                     <div>{po.supplier_name}</div>
                     <div>Amount: ${po.total_amount}</div>
                     <div>
+                      Delivery Confirmed: {po.confirmed_at ? "Yes" : "Pending"}
+                    </div>
+                    <div>
+                      Delivery Note: {po.delivery_note_number || "Not generated"}
+                    </div>
+                    <div>
+                      Payment Voucher: {po.payment_voucher_number || "Not generated"}
+                    </div>
+                    <div>
                       Delivery Link:{" "}
                       <a
                         href={`/delivery/confirm/${po.confirmation_token}`}
@@ -1054,14 +1159,21 @@ export default function SupplyBranchDashboard({ user }) {
                       size="sm"
                       variant="secondary"
                       onClick={() => generateDeliveryNote(po.id)}
-                      disabled={actionLoading}
+                      disabled={
+                        actionLoading || !po.confirmed_at || !!po.delivery_note_number
+                      }
                     >
                       Delivery Note
                     </Button>
                     <Button
                       size="sm"
                       onClick={() => generatePaymentVoucher(po.id)}
-                      disabled={actionLoading}
+                      disabled={
+                        actionLoading ||
+                        !po.confirmed_at ||
+                        !po.delivery_note_number ||
+                        !!po.payment_voucher_number
+                      }
                     >
                       Payment Voucher
                     </Button>

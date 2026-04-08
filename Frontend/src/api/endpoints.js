@@ -3,6 +3,7 @@ import api from "./client";
 export const authApi = {
   register: (data) => api.post("/auth/register", data),
   login: (email, password) => api.post("/auth/login", { email, password }),
+  listUsersByRole: (role) => api.get("/auth/users", { params: { role } }),
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -32,6 +33,8 @@ export const procurementApi = {
   getApprovedWithoutJobs: () => api.get("/requests/approved/without-jobs"),
   startJob: (id, data) => api.post(`/procurement/${id}/method`, data),
   selectMethod: (id, data) => api.post(`/procurement/${id}/method`, data),
+  assignClerk: (jobId, clerkId) =>
+    api.post(`/procurement/jobs/${jobId}/assign-clerk`, { clerkId }),
   selectSuppliers: (id, data) => api.post(`/procurement/${id}/suppliers`, data),
   selectCategory: (id, data) =>
     api.post(`/procurement/jobs/${id}/select-category`, data),

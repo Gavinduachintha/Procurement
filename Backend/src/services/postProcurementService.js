@@ -496,9 +496,26 @@ export const postProcurementService = {
       throw new ApiError(404, "Purchase order not found");
     }
 
-    const delivery = await postProcurementRepository.findDeliveryByToken(
-      payload.confirmationToken || "",
-    );
+    const job = await postProcurementRepository.findJobContext(po.job_id);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    if (user.role === USER_ROLES.SUBJECT_CLERK) {
+      ensureClerkAccess(user, job);
+    }
+
+    const delivery =
+      await postProcurementRepository.getDeliveryConfirmationByPurchaseOrderId(
+        purchaseOrderId,
+      );
+
+    if (!delivery?.confirmed_at) {
+      throw new ApiError(
+        400,
+        "Delivery must be confirmed before generating delivery note",
+      );
+    }
 
     const noteContent = {
       jobId: po.job_id,
@@ -542,16 +559,42 @@ export const postProcurementService = {
       throw new ApiError(404, "Purchase order not found");
     }
 
+    const job = await postProcurementRepository.findJobContext(po.job_id);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    if (user.role === USER_ROLES.SUBJECT_CLERK) {
+      ensureClerkAccess(user, job);
+    }
+
+    const delivery =
+      await postProcurementRepository.getDeliveryConfirmationByPurchaseOrderId(
+        purchaseOrderId,
+      );
+    if (!delivery?.confirmed_at) {
+      throw new ApiError(
+        400,
+        "Delivery must be confirmed before generating payment voucher",
+      );
+    }
+
     const note =
       await postProcurementRepository.getDeliveryNoteByPurchaseOrderId(
         purchaseOrderId,
       );
+    if (!note) {
+      throw new ApiError(
+        400,
+        "Delivery note is required before generating payment voucher",
+      );
+    }
 
     const voucher = await postProcurementRepository.createPaymentVoucher({
       purchaseOrderId,
       createdBy: user.id,
       invoiceReference: payload.invoiceReference,
-      deliveryNoteReference: payload.deliveryNoteReference || note?.note_number,
+      deliveryNoteReference: payload.deliveryNoteReference || note.note_number,
       payableAmount: payload.payableAmount || po.total_amount,
       department: payload.department || po.requesting_department,
       voucherDate: payload.voucherDate || new Date().toISOString().slice(0, 10),

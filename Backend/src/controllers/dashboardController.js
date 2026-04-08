@@ -14,7 +14,7 @@ export const dashboardController = {
   }),
 
   supplyBranch: asyncHandler(async (req, res) => {
-    const data = await dashboardService.supplyBranch();
+    const data = await dashboardService.supplyBranch(req.user);
     res.json(data);
   }),
 

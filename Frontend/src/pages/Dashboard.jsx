@@ -185,7 +185,7 @@ export default function Dashboard({ user }) {
               {requests.map((req) => (
                 <tr key={req.id}>
                   <td>
-                    <strong>{req.id}</strong>
+                    <strong>{req.request_id || req.id}</strong>
                   </td>
                   <td>{req.item_name || req.request_id || "-"}</td>
                   <td>{req.department || "-"}</td>
@@ -197,7 +197,7 @@ export default function Dashboard({ user }) {
                   <td>${req.estimated_cost || req.total_amount || "0.00"}</td>
                   <td>
                     <Link
-                      to={`/request/${req.id}`}
+                      to={`/request/${req.purchase_request_id || req.id}`}
                       className="btn btn-sm btn-secondary"
                     >
                       <Eye size={16} />

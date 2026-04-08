@@ -341,10 +341,14 @@ export const postProcurementRepository = {
          dc.acceptance_status,
          dc.delivery_date,
          dc.quantity_delivered,
-         dc.confirmed_at
+         dc.confirmed_at,
+         dn.note_number AS delivery_note_number,
+         pv.voucher_number AS payment_voucher_number
        FROM purchase_orders po
        JOIN suppliers s ON s.id = po.supplier_id
        LEFT JOIN delivery_confirmations dc ON dc.purchase_order_id = po.id
+       LEFT JOIN delivery_notes dn ON dn.purchase_order_id = po.id
+       LEFT JOIN payment_vouchers pv ON pv.purchase_order_id = po.id
        WHERE po.job_id = $1
        ORDER BY po.id ASC`,
       [jobId],
@@ -396,6 +400,16 @@ export const postProcurementRepository = {
         payload.remarks || null,
         payload.acceptanceStatus,
       ],
+    );
+    return rows[0] || null;
+  },
+
+  async getDeliveryConfirmationByPurchaseOrderId(purchaseOrderId) {
+    const { rows } = await query(
+      `SELECT *
+       FROM delivery_confirmations
+       WHERE purchase_order_id = $1`,
+      [purchaseOrderId],
     );
     return rows[0] || null;
   },
