@@ -183,7 +183,9 @@ export default function SupplyBranchDashboard({ user }) {
     setSelectedJob(job);
     setModalType("assign-clerk");
     setSubjectClerks([]);
-    setSelectedClerkId(job.assigned_clerk_id ? String(job.assigned_clerk_id) : "");
+    setSelectedClerkId(
+      job.assigned_clerk_id ? String(job.assigned_clerk_id) : "",
+    );
     setIsModalOpen(true);
     setActionLoading(true);
     setError("");
@@ -881,7 +883,8 @@ export default function SupplyBranchDashboard({ user }) {
         title="Assign Subject Clerk"
       >
         <p className="mb-2">
-          Job: <strong>{selectedJob?.job_number || `JOB-${selectedJob?.id}`}</strong>
+          Job:{" "}
+          <strong>{selectedJob?.job_number || `JOB-${selectedJob?.id}`}</strong>
         </p>
 
         <Select
@@ -1138,10 +1141,12 @@ export default function SupplyBranchDashboard({ user }) {
                       Delivery Confirmed: {po.confirmed_at ? "Yes" : "Pending"}
                     </div>
                     <div>
-                      Delivery Note: {po.delivery_note_number || "Not generated"}
+                      Delivery Note:{" "}
+                      {po.delivery_note_number || "Not generated"}
                     </div>
                     <div>
-                      Payment Voucher: {po.payment_voucher_number || "Not generated"}
+                      Payment Voucher:{" "}
+                      {po.payment_voucher_number || "Not generated"}
                     </div>
                     <div>
                       Delivery Link:{" "}
@@ -1160,7 +1165,9 @@ export default function SupplyBranchDashboard({ user }) {
                       variant="secondary"
                       onClick={() => generateDeliveryNote(po.id)}
                       disabled={
-                        actionLoading || !po.confirmed_at || !!po.delivery_note_number
+                        actionLoading ||
+                        !po.confirmed_at ||
+                        !!po.delivery_note_number
                       }
                     >
                       Delivery Note
