@@ -3,6 +3,7 @@
 Date: 2026-04-08
 
 Execution template:
+
 - [docs/uat-execution-checksheet.md](docs/uat-execution-checksheet.md)
 
 ## 1. Goal
@@ -33,11 +34,13 @@ Validate the full request-to-payment workflow including stage-2 procurement, whi
 Actor: REQUESTING_OFFICER
 
 Actions:
+
 - Login
 - Create a new request (recommended: IT item)
 - Open request details page
 
 Expected:
+
 - Request is created successfully
 - Request status reaches SPEC_REVIEW_PENDING
 
@@ -46,10 +49,12 @@ Expected:
 Actor: DIRECTOR_ICT (or MAINTENANCE_ENGINEER for NON_IT)
 
 Actions:
+
 - Open specification review list
 - Review the request and submit notes
 
 Expected:
+
 - Request status becomes SPEC_RETURNED_TO_REQUESTER
 
 ### Step 3: Requester Confirmation
@@ -57,10 +62,12 @@ Expected:
 Actor: REQUESTING_OFFICER
 
 Actions:
+
 - Open the same request details
 - Click Accept and Continue
 
 Expected:
+
 - Request status becomes APPROVED
 - Request is now visible for supply branch procurement start
 
@@ -69,10 +76,12 @@ Expected:
 Actors: DEAN, REGISTRAR, BURSAR, VICE_CHANCELLOR
 
 Actions:
+
 - Login each role
 - Open approvals page
 
 Expected:
+
 - Requests are visible for viewing
 - No active approval decision flow is available
 - System behavior remains view/notification only
@@ -82,11 +91,13 @@ Expected:
 Actor: SUPPLY_BRANCH
 
 Actions:
+
 - Open supply branch dashboard
 - Start job for approved request by choosing a procurement method
 - Assign a SUBJECT_CLERK to the created job
 
 Expected:
+
 - Job is created and visible in dashboard
 - Assigned clerk is shown on the job row
 
@@ -95,12 +106,14 @@ Expected:
 Actor: SUBJECT_CLERK (or SUPPLY_BRANCH)
 
 Actions:
+
 - Open assigned job
 - Select supplier category
 - Select suppliers
 - Generate quotation letters
 
 Expected:
+
 - Category and suppliers are saved
 - Letters generation succeeds
 
@@ -109,9 +122,11 @@ Expected:
 Actor: SUBJECT_CLERK (assigned) or SUPPLY_BRANCH
 
 Actions:
+
 - Send job to TEC
 
 Expected:
+
 - Job status becomes PENDING_TEC_DECISION
 
 ### Step 8: Enter TEC Decisions
@@ -119,11 +134,13 @@ Expected:
 Actor: SUBJECT_CLERK (assigned) or SUPPLY_BRANCH
 
 Actions:
+
 - Enter TEC decision rows for suppliers
 - Mark at least one supplier as recommended
 - Save TEC decisions
 
 Expected:
+
 - TEC decisions are saved
 - Committee report is generated
 - Committee type is determined (MINOR or MAJOR)
@@ -134,11 +151,13 @@ Expected:
 Actors: SUBJECT_CLERK or SUPPLY_BRANCH, then committee role
 
 Actions:
+
 - Route job to committee
 - Login as the expected committee role (MINOR_COMMITTEE or MAJOR_COMMITTEE)
 - Record committee decision as APPROVED
 
 Expected:
+
 - Job status moves to PENDING_MINOR_COMMITTEE_APPROVAL or PENDING_MAJOR_COMMITTEE_APPROVAL
 - After approval, status becomes COMMITTEE_APPROVED
 
@@ -147,10 +166,12 @@ Expected:
 Actor: SUPPLY_BRANCH
 
 Actions:
+
 - Generate purchase orders for committee-approved job
 - Open purchase order list for the job
 
 Expected:
+
 - Purchase orders are generated
 - Job status becomes PURCHASE_ORDER_GENERATED
 - Confirmation links/tokens exist for each purchase order
@@ -160,10 +181,12 @@ Expected:
 Actor: Requesting officer or delivery confirmer
 
 Actions:
+
 - Open delivery confirmation URL from purchase order entry
 - Submit delivery confirmation
 
 Expected:
+
 - Delivery confirmation succeeds
 - Job status becomes DELIVERED or ACCEPTED
 
@@ -172,9 +195,11 @@ Expected:
 Actor: SUBJECT_CLERK (assigned) or SUPPLY_BRANCH
 
 Actions:
+
 - Generate delivery note from purchase order
 
 Expected:
+
 - Delivery note is generated successfully
 - Action is allowed only after delivery confirmation
 
@@ -183,9 +208,11 @@ Expected:
 Actor: SUBJECT_CLERK (assigned), SUPPLY_BRANCH, or FINANCE_OFFICER
 
 Actions:
+
 - Generate payment voucher for purchase order
 
 Expected:
+
 - Payment voucher is generated successfully
 - Job status becomes PAYMENT_VOUCHER_GENERATED
 - Action is allowed only after delivery note exists
@@ -195,10 +222,12 @@ Expected:
 Actors: SUPPLY_BRANCH, FINANCE_OFFICER, MINOR_COMMITTEE, MAJOR_COMMITTEE
 
 Actions:
+
 - Open quarterly report
 - Open annual report
 
 Expected:
+
 - Reports load successfully for allowed roles
 - Unauthorized roles do not get access
 
@@ -213,6 +242,7 @@ Expected:
 ## 6. Evidence Checklist
 
 For each step capture:
+
 - Screenshot of page state
 - Actor role used
 - Request ID and Job Number
@@ -222,6 +252,7 @@ For each step capture:
 ## 7. Exit Criteria
 
 UAT passes when:
+
 - Golden path completes from request submission to payment voucher
 - All negative tests return correct blocking behavior
 - No blocker or critical defects remain open
