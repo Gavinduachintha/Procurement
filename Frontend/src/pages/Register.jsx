@@ -31,6 +31,10 @@ export default function Register({ setUser }) {
     { value: "VICE_CHANCELLOR", label: "Vice Chancellor" },
     { value: "SUPPLY_BRANCH", label: "Supply Branch" },
     { value: "SUBJECT_CLERK", label: "Subject Clerk" },
+    { value: "TEC_MEMBER", label: "TEC Member" },
+    { value: "MINOR_COMMITTEE", label: "Minor Committee" },
+    { value: "MAJOR_COMMITTEE", label: "Major Committee" },
+    { value: "FINANCE_OFFICER", label: "Finance Officer" },
   ];
 
   const departments = [
@@ -40,6 +44,8 @@ export default function Register({ setUser }) {
     "Administration",
     "Finance",
     "Supply Branch",
+    "Technical Evaluation Committee",
+    "Procurement Committee",
     "General",
   ];
 
