@@ -7,6 +7,7 @@ import Select from "../components/Select";
 import TextArea from "../components/TextArea";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
+import Modal from "../components/Modal";
 import "./RequestSubmission.css";
 
 const createEmptyItem = () => ({
@@ -29,6 +30,9 @@ export default function RequestSubmission({ user }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
+  const [submissionPreview, setSubmissionPreview] = useState(null);
   const [formData, setFormData] = useState({
     items: [createEmptyItem()],
     funding_source: "",
@@ -110,15 +114,14 @@ export default function RequestSubmission({ user }) {
     { quantity: 0, estimatedCost: 0 },
   );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    console.log("📝 Form submission started");
-    console.log("📋 Form data:", formData);
+  const getOptionLabel = (options, value) => {
+    return options.find((option) => option.value === value)?.label || value;
+  };
 
-    // Validate required fields
+  const validateAndBuildSubmission = () => {
     if (!Array.isArray(formData.items) || formData.items.length === 0) {
       setError("At least one item is required");
-      return;
+      return null;
     }
 
     const normalizedItems = formData.items.map((item) => ({
@@ -145,33 +148,72 @@ export default function RequestSubmission({ user }) {
       setError(
         `Please complete all required fields for item #${invalidItemIndex + 1}`,
       );
-      return;
+      return null;
     }
 
     if (formData.required_date < minRequiredDate) {
-      console.error(
-        "❌ Validation failed: required_date cannot be in the past",
-      );
       setError("Required date cannot be before today");
+      return null;
+    }
+
+    if (!formData.funding_source || !formData.department || !formData.required_date) {
+      setError("Please complete all required request details");
+      return null;
+    }
+
+    const payload = {
+      items: normalizedItems,
+      funding_source: formData.funding_source,
+      justification: formData.justification,
+      department: formData.department,
+      required_date: formData.required_date,
+    };
+
+    const preview = {
+      itemCount: normalizedItems.length,
+      fundingSource: getOptionLabel(fundingOptions, formData.funding_source),
+      department: getOptionLabel(departmentOptions, formData.department),
+      requiredDate: formData.required_date,
+      justification: formData.justification?.trim() || "-",
+      totalQuantity: normalizedItems.reduce((sum, item) => sum + item.quantity, 0),
+      totalEstimatedCost: normalizedItems.reduce(
+        (sum, item) => sum + item.estimated_cost,
+        0,
+      ),
+      items: normalizedItems,
+    };
+
+    return { payload, preview };
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    console.log("📝 Form submission started");
+    console.log("📋 Form data:", formData);
+
+    const submission = validateAndBuildSubmission();
+    if (!submission) {
       return;
     }
 
     setError("");
     setSuccess("");
+    setPendingPayload(submission.payload);
+    setSubmissionPreview(submission.preview);
+    setIsConfirmOpen(true);
+  };
+
+  const confirmAndSubmit = async () => {
+    if (!pendingPayload) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const payload = {
-        items: normalizedItems,
-        funding_source: formData.funding_source,
-        justification: formData.justification,
-        department: formData.department,
-        required_date: formData.required_date,
-      };
+      console.log("📤 Sending request payload:", pendingPayload);
 
-      console.log("📤 Sending request payload:", payload);
-
-      const response = await api.post("/requests", payload);
+      const response = await api.post("/requests", pendingPayload);
 
       console.log("✅ Request created successfully:", response.data);
 
@@ -207,6 +249,9 @@ export default function RequestSubmission({ user }) {
       setError(errorMsg);
     } finally {
       setLoading(false);
+      setIsConfirmOpen(false);
+      setPendingPayload(null);
+      setSubmissionPreview(null);
     }
   };
 
@@ -397,6 +442,81 @@ export default function RequestSubmission({ user }) {
           </div>
         </form>
       </Card>
+
+      <Modal
+        isOpen={isConfirmOpen}
+        onClose={() => {
+          if (!loading) {
+            setIsConfirmOpen(false);
+          }
+        }}
+        title="Confirm Request Submission"
+      >
+        <div className="submission-preview">
+          <div className="confirmation-warning">
+            After submission, this request cannot be changed. Please review the
+            details carefully before proceeding.
+          </div>
+
+          {submissionPreview && (
+            <>
+              <div className="preview-grid">
+                <div>
+                  <strong>Total Items:</strong> {submissionPreview.itemCount}
+                </div>
+                <div>
+                  <strong>Total Quantity:</strong> {submissionPreview.totalQuantity}
+                </div>
+                <div>
+                  <strong>Total Estimated Cost:</strong> $
+                  {submissionPreview.totalEstimatedCost.toFixed(2)}
+                </div>
+                <div>
+                  <strong>Funding Source:</strong> {submissionPreview.fundingSource}
+                </div>
+                <div>
+                  <strong>Department:</strong> {submissionPreview.department}
+                </div>
+                <div>
+                  <strong>Required Date:</strong> {submissionPreview.requiredDate}
+                </div>
+              </div>
+
+              <div className="preview-justification">
+                <strong>Justification:</strong>
+                <p>{submissionPreview.justification}</p>
+              </div>
+
+              <div className="preview-items-list">
+                {submissionPreview.items.map((item, index) => (
+                  <div key={`preview-item-${index}`} className="preview-item-row">
+                    <strong>
+                      Item #{index + 1} ({getOptionLabel(itemTypeOptions, item.item_type)})
+                    </strong>
+                    <div>Name: {item.item_name}</div>
+                    <div>Quantity: {item.quantity}</div>
+                    <div>Cost: ${item.estimated_cost.toFixed(2)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="confirmation-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsConfirmOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={confirmAndSubmit} disabled={loading}>
+              {loading ? "Submitting..." : "Proceed and Submit"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
