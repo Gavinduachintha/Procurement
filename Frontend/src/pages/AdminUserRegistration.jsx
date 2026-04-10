@@ -65,7 +65,8 @@ export default function AdminUserRegistration() {
       setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       const errorMessage =
-        err.response?.data?.message || "Failed to load users for selected role.";
+        err.response?.data?.message ||
+        "Failed to load users for selected role.";
       setError(errorMessage);
       setUsers([]);
     } finally {

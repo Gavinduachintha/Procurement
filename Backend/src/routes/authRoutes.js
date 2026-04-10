@@ -5,10 +5,10 @@ import { authenticate, authorize } from "../middleware/auth.js";
 const router = Router();
 
 router.post(
-	"/register",
-	authenticate,
-	authorize("REGISTRAR", "VICE_CHANCELLOR"),
-	authController.register,
+  "/register",
+  authenticate,
+  authorize("REGISTRAR", "VICE_CHANCELLOR"),
+  authController.register,
 );
 router.post("/login", authController.login);
 router.get("/me", authenticate, authController.me);
