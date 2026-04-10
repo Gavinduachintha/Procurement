@@ -156,7 +156,11 @@ export default function RequestSubmission({ user }) {
       return null;
     }
 
-    if (!formData.funding_source || !formData.department || !formData.required_date) {
+    if (
+      !formData.funding_source ||
+      !formData.department ||
+      !formData.required_date
+    ) {
       setError("Please complete all required request details");
       return null;
     }
@@ -175,7 +179,10 @@ export default function RequestSubmission({ user }) {
       department: getOptionLabel(departmentOptions, formData.department),
       requiredDate: formData.required_date,
       justification: formData.justification?.trim() || "-",
-      totalQuantity: normalizedItems.reduce((sum, item) => sum + item.quantity, 0),
+      totalQuantity: normalizedItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      ),
       totalEstimatedCost: normalizedItems.reduce(
         (sum, item) => sum + item.estimated_cost,
         0,
@@ -465,20 +472,23 @@ export default function RequestSubmission({ user }) {
                   <strong>Total Items:</strong> {submissionPreview.itemCount}
                 </div>
                 <div>
-                  <strong>Total Quantity:</strong> {submissionPreview.totalQuantity}
+                  <strong>Total Quantity:</strong>{" "}
+                  {submissionPreview.totalQuantity}
                 </div>
                 <div>
                   <strong>Total Estimated Cost:</strong> $
                   {submissionPreview.totalEstimatedCost.toFixed(2)}
                 </div>
                 <div>
-                  <strong>Funding Source:</strong> {submissionPreview.fundingSource}
+                  <strong>Funding Source:</strong>{" "}
+                  {submissionPreview.fundingSource}
                 </div>
                 <div>
                   <strong>Department:</strong> {submissionPreview.department}
                 </div>
                 <div>
-                  <strong>Required Date:</strong> {submissionPreview.requiredDate}
+                  <strong>Required Date:</strong>{" "}
+                  {submissionPreview.requiredDate}
                 </div>
               </div>
 
@@ -489,9 +499,13 @@ export default function RequestSubmission({ user }) {
 
               <div className="preview-items-list">
                 {submissionPreview.items.map((item, index) => (
-                  <div key={`preview-item-${index}`} className="preview-item-row">
+                  <div
+                    key={`preview-item-${index}`}
+                    className="preview-item-row"
+                  >
                     <strong>
-                      Item #{index + 1} ({getOptionLabel(itemTypeOptions, item.item_type)})
+                      Item #{index + 1} (
+                      {getOptionLabel(itemTypeOptions, item.item_type)})
                     </strong>
                     <div>Name: {item.item_name}</div>
                     <div>Quantity: {item.quantity}</div>
