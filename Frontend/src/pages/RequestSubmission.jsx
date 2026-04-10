@@ -11,6 +11,12 @@ import "./RequestSubmission.css";
 
 export default function RequestSubmission({ user }) {
   const navigate = useNavigate();
+  const today = new Date();
+  const minRequiredDate = new Date(
+    today.getTime() - today.getTimezoneOffset() * 60000,
+  )
+    .toISOString()
+    .slice(0, 10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -51,6 +57,18 @@ export default function RequestSubmission({ user }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const openDatePicker = (e) => {
+    if (typeof e.target.showPicker === "function") {
+      e.target.showPicker();
+    }
+  };
+
+  const blockManualDateInput = (e) => {
+    if (e.key !== "Tab") {
+      e.preventDefault();
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("📝 Form submission started");
@@ -60,6 +78,14 @@ export default function RequestSubmission({ user }) {
     if (!formData.itemType) {
       console.error("❌ Validation failed: itemType is required");
       setError("Item Type is required");
+      return;
+    }
+
+    if (formData.required_date < minRequiredDate) {
+      console.error(
+        "❌ Validation failed: required_date cannot be in the past",
+      );
+      setError("Required date cannot be before today");
       return;
     }
 
@@ -196,6 +222,12 @@ export default function RequestSubmission({ user }) {
               type="date"
               value={formData.required_date}
               onChange={handleChange}
+              onFocus={openDatePicker}
+              onClick={openDatePicker}
+              onKeyDown={blockManualDateInput}
+              onPaste={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
+              min={minRequiredDate}
               required
             />
           </div>
