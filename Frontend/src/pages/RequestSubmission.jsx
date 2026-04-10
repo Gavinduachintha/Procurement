@@ -9,6 +9,15 @@ import Button from "../components/Button";
 import Alert from "../components/Alert";
 import "./RequestSubmission.css";
 
+const createEmptyItem = () => ({
+  item_type: "IT",
+  item_name: "",
+  item_description: "",
+  technical_specifications: "",
+  quantity: "",
+  estimated_cost: "",
+});
+
 export default function RequestSubmission({ user }) {
   const navigate = useNavigate();
   const today = new Date();
@@ -21,16 +30,11 @@ export default function RequestSubmission({ user }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [formData, setFormData] = useState({
-    item_name: "",
-    item_description: "",
-    technical_specifications: "",
-    quantity: "",
-    estimated_cost: "",
+    items: [createEmptyItem()],
     funding_source: "",
     justification: "",
     department: "",
     required_date: "",
-    itemType: "",
   });
 
   const itemTypeOptions = [
@@ -57,6 +61,35 @@ export default function RequestSubmission({ user }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleItemChange = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      items: prev.items.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item,
+      ),
+    }));
+  };
+
+  const addItem = () => {
+    setFormData((prev) => ({
+      ...prev,
+      items: [...prev.items, createEmptyItem()],
+    }));
+  };
+
+  const removeItem = (index) => {
+    setFormData((prev) => {
+      if (prev.items.length === 1) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        items: prev.items.filter((_, idx) => idx !== index),
+      };
+    });
+  };
+
   const openDatePicker = (e) => {
     if (typeof e.target.showPicker === "function") {
       e.target.showPicker();
@@ -69,15 +102,49 @@ export default function RequestSubmission({ user }) {
     }
   };
 
+  const totals = formData.items.reduce(
+    (acc, item) => ({
+      quantity: acc.quantity + (Number(item.quantity) || 0),
+      estimatedCost: acc.estimatedCost + (Number(item.estimated_cost) || 0),
+    }),
+    { quantity: 0, estimatedCost: 0 },
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log("📝 Form submission started");
     console.log("📋 Form data:", formData);
 
     // Validate required fields
-    if (!formData.itemType) {
-      console.error("❌ Validation failed: itemType is required");
-      setError("Item Type is required");
+    if (!Array.isArray(formData.items) || formData.items.length === 0) {
+      setError("At least one item is required");
+      return;
+    }
+
+    const normalizedItems = formData.items.map((item) => ({
+      item_type: item.item_type,
+      item_name: item.item_name?.trim() || "",
+      item_description: item.item_description?.trim() || "",
+      technical_specifications: item.technical_specifications?.trim() || "",
+      quantity: Number(item.quantity),
+      estimated_cost: Number(item.estimated_cost),
+    }));
+
+    const invalidItemIndex = normalizedItems.findIndex(
+      (item) =>
+        !["IT", "NON_IT"].includes(item.item_type) ||
+        !item.item_name ||
+        !item.technical_specifications ||
+        !Number.isFinite(item.quantity) ||
+        item.quantity <= 0 ||
+        !Number.isFinite(item.estimated_cost) ||
+        item.estimated_cost < 0,
+    );
+
+    if (invalidItemIndex !== -1) {
+      setError(
+        `Please complete all required fields for item #${invalidItemIndex + 1}`,
+      );
       return;
     }
 
@@ -95,9 +162,11 @@ export default function RequestSubmission({ user }) {
 
     try {
       const payload = {
-        ...formData,
-        quantity: parseInt(formData.quantity),
-        estimated_cost: parseFloat(formData.estimated_cost),
+        items: normalizedItems,
+        funding_source: formData.funding_source,
+        justification: formData.justification,
+        department: formData.department,
+        required_date: formData.required_date,
       };
 
       console.log("📤 Sending request payload:", payload);
@@ -106,10 +175,24 @@ export default function RequestSubmission({ user }) {
 
       console.log("✅ Request created successfully:", response.data);
 
-      setSuccess("Request submitted successfully!");
+      const created = response.data;
+      const isSplitResponse = Array.isArray(created?.requests);
+
+      setSuccess(
+        isSplitResponse
+          ? `Multi-item request submitted successfully as ${created.requests.length} requests by item type.`
+          : "Request submitted successfully!",
+      );
+
       setTimeout(() => {
-        console.log("🎯 Redirecting to request details:", response.data.id);
-        navigate(`/request/${response.data.id}`);
+        if (isSplitResponse) {
+          console.log("🎯 Redirecting to dashboard after split request creation");
+          navigate("/dashboard");
+          return;
+        }
+
+        console.log("🎯 Redirecting to request details:", created.id);
+        navigate(`/request/${created.id}`);
       }, 1500);
     } catch (err) {
       const errorMsg =
@@ -138,65 +221,109 @@ export default function RequestSubmission({ user }) {
       <Card>
         <form onSubmit={handleSubmit}>
           <div className="form-section">
-            <h2>Item Information</h2>
-            <Input
-              label="Item Name *"
-              name="item_name"
-              value={formData.item_name}
-              onChange={handleChange}
-              required
-              placeholder="e.g., Laptop"
-            />
-            <Select
-              label="Item Type *"
-              name="itemType"
-              options={itemTypeOptions}
-              value={formData.itemType}
-              onChange={handleChange}
-              required
-            />
-            <TextArea
-              label="Item Description *"
-              name="item_description"
-              value={formData.item_description}
-              onChange={handleChange}
-              required
-              placeholder="Detailed description of the item"
-            />
-            <TextArea
-              label="Technical Specifications *"
-              name="technical_specifications"
-              value={formData.technical_specifications}
-              onChange={handleChange}
-              required
-              placeholder="Detailed technical specifications"
-            />
+            <div className="section-header-row">
+              <h2>Item Information</h2>
+              <Button type="button" variant="secondary" onClick={addItem}>
+                + Add Item
+              </Button>
+            </div>
+
+            <div className="items-container">
+              {formData.items.map((item, index) => (
+                <Card key={`item-${index}`} className="item-card">
+                  <div className="item-card-header">
+                    <h3>Item #{index + 1}</h3>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      disabled={formData.items.length === 1}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+
+                  <div className="form-row">
+                    <Select
+                      label="Item Type *"
+                      options={itemTypeOptions}
+                      value={item.item_type}
+                      onChange={(e) =>
+                        handleItemChange(index, "item_type", e.target.value)
+                      }
+                      required
+                    />
+                    <Input
+                      label="Item Name *"
+                      type="text"
+                      value={item.item_name}
+                      onChange={(e) =>
+                        handleItemChange(index, "item_name", e.target.value)
+                      }
+                      placeholder="e.g., Laptop"
+                      required
+                    />
+                  </div>
+
+                  <TextArea
+                    label="Item Description"
+                    value={item.item_description}
+                    onChange={(e) =>
+                      handleItemChange(index, "item_description", e.target.value)
+                    }
+                    placeholder="Detailed description"
+                  />
+
+                  <TextArea
+                    label="Technical Specifications *"
+                    value={item.technical_specifications}
+                    onChange={(e) =>
+                      handleItemChange(
+                        index,
+                        "technical_specifications",
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Technical specifications"
+                    required
+                  />
+
+                  <div className="form-row">
+                    <Input
+                      label="Quantity *"
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        handleItemChange(index, "quantity", e.target.value)
+                      }
+                      required
+                    />
+                    <Input
+                      label="Estimated Cost ($) *"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={item.estimated_cost}
+                      onChange={(e) =>
+                        handleItemChange(index, "estimated_cost", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <p className="items-summary">
+              Total Quantity: <strong>{totals.quantity}</strong> | Total Estimated
+              Cost: <strong>${totals.estimatedCost.toFixed(2)}</strong>
+            </p>
           </div>
 
           <div className="form-section">
             <h2>Request Details</h2>
-            <div className="form-row">
-              <Input
-                label="Quantity *"
-                name="quantity"
-                type="number"
-                value={formData.quantity}
-                onChange={handleChange}
-                required
-                min="1"
-              />
-              <Input
-                label="Estimated Cost ($) *"
-                name="estimated_cost"
-                type="number"
-                value={formData.estimated_cost}
-                onChange={handleChange}
-                required
-                min="0"
-                step="0.01"
-              />
-            </div>
-
             <div className="form-row">
               <Select
                 label="Funding Source *"

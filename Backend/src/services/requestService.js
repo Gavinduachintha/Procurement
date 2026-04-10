@@ -19,71 +19,95 @@ export const requestService = {
     console.log("📝 Backend: Request submission initiated");
     console.log("📋 Backend: Received payload:", payload);
 
-    // Transform snake_case to camelCase for consistency with repository
-    const transformedPayload = {
-      requesterId: user.id,
-      itemName: payload.item_name || payload.itemName,
-      itemDescription: payload.item_description || payload.itemDescription,
-      technicalSpecifications:
-        payload.technical_specifications || payload.technicalSpecifications,
-      itemType: payload.itemType || payload.item_type,
-      quantity: payload.quantity,
-      estimatedCost: payload.estimated_cost || payload.estimatedCost,
-      fundingSource: payload.funding_source || payload.fundingSource,
-      justification: payload.justification,
-      department: payload.department || user.department || "General",
-      requiredDate: payload.required_date || payload.requiredDate,
-      attachments: payload.attachments || [],
-      status: "SUBMITTED",
-    };
+    const normalizeItemType = (value) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
 
-    console.log("✅ Backend: Transformed payload:", transformedPayload);
+    const itemRows = Array.isArray(payload.items)
+      ? payload.items
+      : [
+          {
+            item_type: payload.item_type || payload.itemType,
+            item_name: payload.item_name || payload.itemName,
+            item_description:
+              payload.item_description || payload.itemDescription || "",
+            technical_specifications:
+              payload.technical_specifications || payload.technicalSpecifications,
+            quantity: payload.quantity,
+            estimated_cost: payload.estimated_cost || payload.estimatedCost,
+          },
+        ];
 
-    const rawItemType = transformedPayload.itemType;
-    const normalizedItemType = String(rawItemType || "")
-      .trim()
-      .toUpperCase()
-      .replace(/[\s-]+/g, "_");
-
-    console.log(
-      "🔄 Backend: ItemType normalized:",
-      rawItemType,
-      "->",
-      normalizedItemType,
-    );
-
-    if (!["IT", "NON_IT"].includes(normalizedItemType)) {
-      throw new ApiError(400, "Invalid item type. Use IT or NON_IT");
+    if (!itemRows.length) {
+      throw new ApiError(400, "At least one item is required");
     }
 
-    transformedPayload.itemType = normalizedItemType;
+    const normalizedItems = itemRows.map((item, index) => {
+      const itemType = normalizeItemType(item.item_type || item.itemType);
+      const itemName = String(item.item_name || item.itemName || "").trim();
+      const itemDescription = String(
+        item.item_description || item.itemDescription || "",
+      ).trim();
+      const technicalSpecifications = String(
+        item.technical_specifications || item.technicalSpecifications || "",
+      ).trim();
+      const quantity = Number(item.quantity);
+      const estimatedCost = Number(item.estimated_cost || item.estimatedCost);
 
-    const checkerRole =
-      normalizedItemType === "IT"
-        ? USER_ROLES.DIRECTOR_ICT
-        : USER_ROLES.MAINTENANCE_ENGINEER;
+      if (!["IT", "NON_IT"].includes(itemType)) {
+        throw new ApiError(
+          400,
+          `Invalid item type for item #${index + 1}. Use IT or NON_IT`,
+        );
+      }
 
-    console.log("🔍 Backend: Looking for checker with role:", checkerRole);
+      if (!itemName) {
+        throw new ApiError(
+          400,
+          `Item name is required for item #${index + 1}`,
+        );
+      }
 
-    let checkers = await userRepository.findByRole(checkerRole);
-    if (!checkers.length) {
-      checkers = await userRepository.findByRole(
-        USER_ROLES.SPECIFICATION_CHECKER,
-      );
-    }
+      if (!technicalSpecifications) {
+        throw new ApiError(
+          400,
+          `Technical specifications are required for item #${index + 1}`,
+        );
+      }
 
-    if (!checkers.length) {
-      throw new ApiError(
-        400,
-        `No available specification checker for role ${checkerRole}`,
-      );
-    }
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        throw new ApiError(
+          400,
+          `Quantity must be greater than zero for item #${index + 1}`,
+        );
+      }
 
-    console.log(
-      "✅ Backend: Found",
-      checkers.length,
-      "specification checker(s)",
-    );
+      if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
+        throw new ApiError(
+          400,
+          `Estimated cost must be zero or positive for item #${index + 1}`,
+        );
+      }
+
+      return {
+        itemType,
+        itemName,
+        itemDescription,
+        technicalSpecifications,
+        quantity,
+        estimatedCost,
+      };
+    });
+
+    const groupedByType = normalizedItems.reduce((acc, item) => {
+      if (!acc[item.itemType]) {
+        acc[item.itemType] = [];
+      }
+      acc[item.itemType].push(item);
+      return acc;
+    }, {});
 
     const approvers = (
       await Promise.all(
@@ -92,64 +116,124 @@ export const requestService = {
     ).flat();
 
     console.log("✅ Backend: Found", approvers.length, "approver(s)");
-    console.log("💾 Backend: Creating purchase request with data:", {
-      itemName: transformedPayload.itemName,
-      quantity: transformedPayload.quantity,
-      estimatedCost: transformedPayload.estimatedCost,
-      requiredDate: transformedPayload.requiredDate,
-    });
 
-    const created = await requestRepository.create({
-      ...transformedPayload,
-      itemType: normalizedItemType,
-    });
+    const createdRequests = [];
 
-    console.log("✅ Backend: Request created with ID:", created.id);
+    for (const [itemType, itemsForType] of Object.entries(groupedByType)) {
+      const checkerRole =
+        itemType === "IT"
+          ? USER_ROLES.DIRECTOR_ICT
+          : USER_ROLES.MAINTENANCE_ENGINEER;
 
-    const year = new Date(created.created_at).getFullYear();
-    const requestNumber = buildRequestNumber({ year, serial: created.id });
-    const saved = await requestRepository.updateRequestId(
-      created.id,
-      requestNumber,
-    );
+      console.log("🔍 Backend: Looking for checker with role:", checkerRole);
 
-    console.log("✅ Backend: Request number assigned:", requestNumber);
+      let checkers = await userRepository.findByRole(checkerRole);
+      if (!checkers.length) {
+        checkers = await userRepository.findByRole(
+          USER_ROLES.SPECIFICATION_CHECKER,
+        );
+      }
 
-    const assigned = await requestRepository.assignSpecificationChecker(
-      saved.id,
-      checkers[0].id,
-      REQUEST_STATUS.SPEC_REVIEW_PENDING,
-    );
+      if (!checkers.length) {
+        throw new ApiError(
+          400,
+          `No available specification checker for role ${checkerRole}`,
+        );
+      }
 
-    console.log("✅ Backend: Specification checker assigned:", checkers[0].id);
+      const totalQuantity = itemsForType.reduce(
+        (sum, item) => sum + item.quantity,
+        0,
+      );
+      const totalEstimatedCost = Number(
+        itemsForType
+          .reduce((sum, item) => sum + item.estimatedCost, 0)
+          .toFixed(2),
+      );
+      const firstItem = itemsForType[0];
 
-    await approvalRepository.ensureApprovalSlots(assigned.id, approvers);
+      const transformedPayload = {
+        requesterId: user.id,
+        itemName:
+          itemsForType.length === 1
+            ? firstItem.itemName
+            : `${firstItem.itemName} (+${itemsForType.length - 1} more items)`,
+        itemDescription:
+          itemsForType.length === 1
+            ? firstItem.itemDescription || null
+            : `Multi-item ${itemType} request containing ${itemsForType.length} items`,
+        technicalSpecifications:
+          itemsForType
+            .map(
+              (item, index) =>
+                `${index + 1}. ${item.itemName}: ${item.technicalSpecifications}`,
+            )
+            .join("\n"),
+        itemType,
+        quantity: totalQuantity,
+        estimatedCost: totalEstimatedCost,
+        fundingSource: payload.funding_source || payload.fundingSource,
+        justification: payload.justification,
+        department: payload.department || user.department || "General",
+        requiredDate: payload.required_date || payload.requiredDate,
+        attachments: payload.attachments || [],
+        items: itemsForType,
+        status: "SUBMITTED",
+      };
+
+      console.log("💾 Backend: Creating purchase request with data:", {
+        itemType,
+        itemName: transformedPayload.itemName,
+        quantity: transformedPayload.quantity,
+        estimatedCost: transformedPayload.estimatedCost,
+      });
+
+      const created = await requestRepository.create(transformedPayload);
+
+      const year = new Date(created.created_at).getFullYear();
+      const requestNumber = buildRequestNumber({ year, serial: created.id });
+      const saved = await requestRepository.updateRequestId(
+        created.id,
+        requestNumber,
+      );
+
+      const assigned = await requestRepository.assignSpecificationChecker(
+        saved.id,
+        checkers[0].id,
+        REQUEST_STATUS.SPEC_REVIEW_PENDING,
+      );
+
+      await approvalRepository.ensureApprovalSlots(assigned.id, approvers);
+
+      await notificationService.notifyUsers(
+        [
+          user.id,
+          assigned.specification_checker_id,
+          ...approvers.map((a) => a.id),
+        ],
+        {
+          eventType: "REQUEST_SUBMITTED",
+          subject: `Purchase request submitted (${assigned.request_id})`,
+          message: `Request ${assigned.request_id} (${itemType}) has been submitted and sent for specification checking.`,
+        },
+      );
+
+      createdRequests.push(assigned);
+    }
 
     console.log(
-      "✅ Backend: Approval slots created for",
-      approvers.length,
-      "approvers",
+      "✅ Backend: Request submission complete. Created requests:",
+      createdRequests.map((request) => request.request_id),
     );
 
-    await notificationService.notifyUsers(
-      [
-        user.id,
-        assigned.specification_checker_id,
-        ...approvers.map((a) => a.id),
-      ],
-      {
-        eventType: "REQUEST_SUBMITTED",
-        subject: `Purchase request submitted (${assigned.request_id})`,
-        message: `Request ${assigned.request_id} has been submitted and sent for specification checking.`,
-      },
-    );
+    if (createdRequests.length === 1) {
+      return createdRequests[0];
+    }
 
-    console.log(
-      "✅ Backend: Request submission complete, request ID:",
-      assigned.request_id,
-    );
-
-    return assigned;
+    return {
+      splitByItemType: true,
+      requests: createdRequests,
+    };
   },
 
   async myRequests(userId) {
@@ -165,7 +249,12 @@ export const requestService = {
     if (!request) {
       throw new ApiError(404, "Request not found");
     }
-    return request;
+
+    const items = await requestRepository.listItemsByRequestId(request.id);
+    return {
+      ...request,
+      items,
+    };
   },
 
   async approvedRequestsWithoutJobs() {

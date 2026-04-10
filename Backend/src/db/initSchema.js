@@ -34,6 +34,23 @@ export const initializeSchema = async () => {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS purchase_request_items (
+      id BIGSERIAL PRIMARY KEY,
+      purchase_request_id BIGINT NOT NULL REFERENCES purchase_requests(id) ON DELETE CASCADE,
+      line_no INTEGER NOT NULL,
+      item_type TEXT NOT NULL CHECK (item_type IN ('IT', 'NON_IT')),
+      item_name TEXT NOT NULL,
+      item_description TEXT,
+      technical_specifications TEXT NOT NULL,
+      quantity INTEGER NOT NULL CHECK (quantity > 0),
+      estimated_cost NUMERIC(14,2) NOT NULL CHECK (estimated_cost >= 0),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (purchase_request_id, line_no)
+    );
+
+    ALTER TABLE purchase_request_items
+    ADD COLUMN IF NOT EXISTS item_type TEXT;
+
     CREATE TABLE IF NOT EXISTS specification_reviews (
       id BIGSERIAL PRIMARY KEY,
       purchase_request_id BIGINT NOT NULL REFERENCES purchase_requests(id),
