@@ -7,7 +7,6 @@ import {
 import { useState, useEffect } from "react";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import RequestSubmission from "./pages/RequestSubmission";
 import SpecificationReview from "./pages/SpecificationReview";
@@ -15,6 +14,7 @@ import ApprovalDashboard from "./pages/ApprovalDashboard";
 import SupplyBranchDashboard from "./pages/SupplyBranchDashboard";
 import RequestDetails from "./pages/RequestDetails";
 import DeliveryConfirmation from "./pages/DeliveryConfirmation";
+import AdminUserRegistration from "./pages/AdminUserRegistration";
 import "./App.css";
 
 function App() {
@@ -49,6 +49,9 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
+  const hasUserAdminAccess =
+    user && ["REGISTRAR", "VICE_CHANCELLOR"].includes(user.role);
+
   return (
     <Router>
       <Routes>
@@ -57,7 +60,7 @@ function App() {
           element={<DeliveryConfirmation />}
         />
         <Route path="/login" element={<Login setUser={setUser} />} />
-        <Route path="/register" element={<Register setUser={setUser} />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
 
         {user ? (
           <Route element={<Layout user={user} setUser={setUser} />}>
@@ -81,6 +84,16 @@ function App() {
             <Route
               path="/supply-branch"
               element={<SupplyBranchDashboard user={user} />}
+            />
+            <Route
+              path="/admin/users"
+              element={
+                hasUserAdminAccess ? (
+                  <AdminUserRegistration />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              }
             />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>

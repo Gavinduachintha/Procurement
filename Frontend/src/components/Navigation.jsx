@@ -7,6 +7,7 @@ import {
   CheckCircle,
   ClipboardList,
   Briefcase,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -67,6 +68,15 @@ export default function Navigation({ user, onLogout }) {
         to: "/supply-branch",
         label: "Procurement",
         icon: Briefcase,
+        show: true,
+      });
+    }
+
+    if (["REGISTRAR", "VICE_CHANCELLOR"].includes(user?.role)) {
+      links.push({
+        to: "/admin/users",
+        label: "User Admin",
+        icon: Users,
         show: true,
       });
     }

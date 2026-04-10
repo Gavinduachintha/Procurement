@@ -1,4 +1,125 @@
 import { query } from "../config/db.js";
+import bcrypt from "bcrypt";
+
+const MANUAL_TEST_USERS = [
+  {
+    fullName: "Rohan Requester",
+    email: "rohan.requester@univ.edu",
+    password: "Req@12345",
+    role: "REQUESTING_OFFICER",
+    department: "Computer Science",
+  },
+  {
+    fullName: "Diana ICT",
+    email: "diana.ict@univ.edu",
+    password: "Ict@12345",
+    role: "DIRECTOR_ICT",
+    department: "ICT Center",
+  },
+  {
+    fullName: "Malik Maintenance",
+    email: "malik.maintenance@univ.edu",
+    password: "Maint@12345",
+    role: "MAINTENANCE_ENGINEER",
+    department: "Maintenance",
+  },
+  {
+    fullName: "Asha Dean",
+    email: "asha.dean@univ.edu",
+    password: "Dean@12345",
+    role: "DEAN",
+    department: "Administration",
+  },
+  {
+    fullName: "Ravi Registrar",
+    email: "ravi.registrar@univ.edu",
+    password: "Reg@12345",
+    role: "REGISTRAR",
+    department: "Administration",
+  },
+  {
+    fullName: "Bela Bursar",
+    email: "bela.bursar@univ.edu",
+    password: "Bur@12345",
+    role: "BURSAR",
+    department: "Finance",
+  },
+  {
+    fullName: "Victor Chancellor",
+    email: "victor.vc@univ.edu",
+    password: "Vc@12345",
+    role: "VICE_CHANCELLOR",
+    department: "Administration",
+  },
+  {
+    fullName: "Sahan Supply",
+    email: "sahan.supply@univ.edu",
+    password: "Supply@12345",
+    role: "SUPPLY_BRANCH",
+    department: "Supply Branch",
+  },
+  {
+    fullName: "Clara Clerk",
+    email: "clara.clerk@univ.edu",
+    password: "Clerk@12345",
+    role: "SUBJECT_CLERK",
+    department: "Supply Branch",
+  },
+  {
+    fullName: "Thenu TEC",
+    email: "thenu.tec@univ.edu",
+    password: "Tec@12345",
+    role: "TEC_MEMBER",
+    department: "Technical Evaluation Committee",
+  },
+  {
+    fullName: "Nimal Minor Committee",
+    email: "nimal.minor.committee@univ.edu",
+    password: "Minor@12345",
+    role: "MINOR_COMMITTEE",
+    department: "Procurement Committee",
+  },
+  {
+    fullName: "Maya Major Committee",
+    email: "maya.major.committee@univ.edu",
+    password: "Major@12345",
+    role: "MAJOR_COMMITTEE",
+    department: "Procurement Committee",
+  },
+  {
+    fullName: "Fari Finance",
+    email: "fari.finance@univ.edu",
+    password: "Finance@12345",
+    role: "FINANCE_OFFICER",
+    department: "Finance",
+  },
+];
+
+const ensureManualTestUsers = async () => {
+  for (const manualUser of MANUAL_TEST_USERS) {
+    const existing = await query("SELECT id FROM users WHERE email = $1", [
+      manualUser.email.toLowerCase(),
+    ]);
+
+    if (existing.rowCount > 0) {
+      continue;
+    }
+
+    const passwordHash = await bcrypt.hash(manualUser.password, 10);
+
+    await query(
+      `INSERT INTO users (full_name, email, password_hash, role, department)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        manualUser.fullName,
+        manualUser.email.toLowerCase(),
+        passwordHash,
+        manualUser.role,
+        manualUser.department,
+      ],
+    );
+  }
+};
 
 export const initializeSchema = async () => {
   await query(`
@@ -227,4 +348,6 @@ export const initializeSchema = async () => {
       UNIQUE (year, serial_number)
     );
   `);
+
+  await ensureManualTestUsers();
 };
