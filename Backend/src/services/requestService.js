@@ -34,7 +34,8 @@ export const requestService = {
             item_description:
               payload.item_description || payload.itemDescription || "",
             technical_specifications:
-              payload.technical_specifications || payload.technicalSpecifications,
+              payload.technical_specifications ||
+              payload.technicalSpecifications,
             quantity: payload.quantity,
             estimated_cost: payload.estimated_cost || payload.estimatedCost,
           },
@@ -64,10 +65,7 @@ export const requestService = {
       }
 
       if (!itemName) {
-        throw new ApiError(
-          400,
-          `Item name is required for item #${index + 1}`,
-        );
+        throw new ApiError(400, `Item name is required for item #${index + 1}`);
       }
 
       if (!technicalSpecifications) {
@@ -162,13 +160,12 @@ export const requestService = {
           itemsForType.length === 1
             ? firstItem.itemDescription || null
             : `Multi-item ${itemType} request containing ${itemsForType.length} items`,
-        technicalSpecifications:
-          itemsForType
-            .map(
-              (item, index) =>
-                `${index + 1}. ${item.itemName}: ${item.technicalSpecifications}`,
-            )
-            .join("\n"),
+        technicalSpecifications: itemsForType
+          .map(
+            (item, index) =>
+              `${index + 1}. ${item.itemName}: ${item.technicalSpecifications}`,
+          )
+          .join("\n"),
         itemType,
         quantity: totalQuantity,
         estimatedCost: totalEstimatedCost,

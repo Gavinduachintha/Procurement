@@ -186,7 +186,9 @@ export default function RequestSubmission({ user }) {
 
       setTimeout(() => {
         if (isSplitResponse) {
-          console.log("🎯 Redirecting to dashboard after split request creation");
+          console.log(
+            "🎯 Redirecting to dashboard after split request creation",
+          );
           navigate("/dashboard");
           return;
         }
@@ -270,7 +272,11 @@ export default function RequestSubmission({ user }) {
                     label="Item Description"
                     value={item.item_description}
                     onChange={(e) =>
-                      handleItemChange(index, "item_description", e.target.value)
+                      handleItemChange(
+                        index,
+                        "item_description",
+                        e.target.value,
+                      )
                     }
                     placeholder="Detailed description"
                   />
@@ -307,7 +313,11 @@ export default function RequestSubmission({ user }) {
                       step="0.01"
                       value={item.estimated_cost}
                       onChange={(e) =>
-                        handleItemChange(index, "estimated_cost", e.target.value)
+                        handleItemChange(
+                          index,
+                          "estimated_cost",
+                          e.target.value,
+                        )
                       }
                       required
                     />
@@ -317,8 +327,9 @@ export default function RequestSubmission({ user }) {
             </div>
 
             <p className="items-summary">
-              Total Quantity: <strong>{totals.quantity}</strong> | Total Estimated
-              Cost: <strong>${totals.estimatedCost.toFixed(2)}</strong>
+              Total Quantity: <strong>{totals.quantity}</strong> | Total
+              Estimated Cost:{" "}
+              <strong>${totals.estimatedCost.toFixed(2)}</strong>
             </p>
           </div>
 
