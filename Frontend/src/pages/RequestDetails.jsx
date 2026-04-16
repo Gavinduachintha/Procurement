@@ -183,7 +183,6 @@ export default function RequestDetails({ user }) {
             </div>
           </div>
         </Card>
-
       </div>
 
       <Card>
@@ -278,7 +277,9 @@ export default function RequestDetails({ user }) {
                   <p>{request.checked_specifications}</p>
                 </div>
               )}
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+              <div
+                style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
+              >
                 <Button
                   variant="success"
                   onClick={() => handleConfirmSpecification("ACCEPT")}
@@ -288,7 +289,9 @@ export default function RequestDetails({ user }) {
                 </Button>
                 <Button
                   variant="secondary"
-                  onClick={() => handleConfirmSpecification("REQUEST_MODIFICATION")}
+                  onClick={() =>
+                    handleConfirmSpecification("REQUEST_MODIFICATION")
+                  }
                   disabled={actionLoading}
                 >
                   {actionLoading ? "Submitting..." : "Request Modification"}
