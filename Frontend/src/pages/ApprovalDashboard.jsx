@@ -62,12 +62,13 @@ export default function ApprovalDashboard({ user }) {
     }
   };
 
+
   if (loading) return <div className="loading-state">Loading approvals...</div>;
 
   return (
     <div className="approval-dashboard">
       <div className="page-header">
-        <h1>Approval Dashboard (View Only)</h1>
+        <h1>Approval Dashboard</h1>
         <p>
           Receive notifications and view requests. No approval action required.
         </p>
@@ -76,8 +77,8 @@ export default function ApprovalDashboard({ user }) {
       {error && <Alert type="error">{error}</Alert>}
 
       <Alert type="info">
-        Manual approvals are disabled for DEAN / REGISTRAR / BURSAR /
-        VICE_CHANCELLOR.
+        Item-level technical decisions are handled by DIRECTOR_ICT / MAINTENANCE_ENGINEER
+        in Specification Review.
       </Alert>
 
       {requests.length === 0 ? (
@@ -94,7 +95,7 @@ export default function ApprovalDashboard({ user }) {
                 <th>Department</th>
                 <th>Amount</th>
                 <th>Funding</th>
-                <th>Action</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -106,12 +107,14 @@ export default function ApprovalDashboard({ user }) {
                   <td>${req.estimated_cost}</td>
                   <td>{req.funding_source}</td>
                   <td>
-                    <Link
-                      to={`/request/${req.purchase_request_id || req.id}`}
-                      className="btn btn-sm btn-secondary"
-                    >
-                      <Eye size={16} />
-                    </Link>
+                    <div className="action-buttons">
+                      <Link
+                        to={`/request/${req.purchase_request_id || req.id}`}
+                        className="btn btn-sm btn-secondary"
+                      >
+                        <Eye size={16} />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -23,6 +23,46 @@ export const approvalRepository = {
     return rows[0] || null;
   },
 
+  async upsertItemDecision({
+    purchaseRequestId,
+    lineNo,
+    approverId,
+    decision,
+    message,
+  }) {
+    const { rows } = await query(
+      `INSERT INTO approval_item_decisions (
+         purchase_request_id,
+         line_no,
+         approver_id,
+         decision,
+         message,
+         decided_at
+       ) VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (purchase_request_id, line_no, approver_id)
+       DO UPDATE SET
+         decision = EXCLUDED.decision,
+         message = EXCLUDED.message,
+         decided_at = NOW()
+       RETURNING *`,
+      [purchaseRequestId, lineNo, approverId, decision, message || null],
+    );
+
+    return rows[0] || null;
+  },
+
+  async listItemDecisionsByRequestAndApprover(purchaseRequestId, approverId) {
+    const { rows } = await query(
+      `SELECT *
+       FROM approval_item_decisions
+       WHERE purchase_request_id = $1 AND approver_id = $2
+       ORDER BY line_no ASC`,
+      [purchaseRequestId, approverId],
+    );
+
+    return rows;
+  },
+
   async listByRequest(purchaseRequestId) {
     const { rows } = await query(
       `SELECT a.*, u.full_name
@@ -55,7 +95,9 @@ export const approvalRepository = {
       `SELECT pr.*
        FROM approvals a
        JOIN purchase_requests pr ON pr.id = a.purchase_request_id
-       WHERE a.approver_id = $1 AND a.decision = 'PENDING'
+       WHERE a.approver_id = $1
+         AND a.decision = 'PENDING'
+         AND pr.status IN ('APPROVAL_PENDING', 'CLARIFICATION_REQUESTED')
        ORDER BY pr.updated_at DESC`,
       [approverId],
     );

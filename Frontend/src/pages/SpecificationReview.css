@@ -94,6 +94,27 @@
   background: #fcfcfc;
 }
 
+.item-decision-select {
+  width: 100%;
+  min-width: 130px;
+  padding: 0.45rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.item-message-input {
+  width: 100%;
+  min-width: 220px;
+  min-height: 80px;
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
 .modal-actions {
   display: flex;
   gap: 1rem;

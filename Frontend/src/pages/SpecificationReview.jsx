@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
-import TextArea from "../components/TextArea";
 import Alert from "../components/Alert";
 import Modal from "../components/Modal";
 import "./SpecificationReview.css";
@@ -11,14 +10,15 @@ export default function SpecificationReview({ user }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [reviewNotes, setReviewNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
-  const [requestDetailsLoading, setRequestDetailsLoading] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [itemDecisions, setItemDecisions] = useState([]);
 
   useEffect(() => {
-  const [detailsLoading, setDetailsLoading] = useState(false);
+    console.log(
       "🔍 SpecificationReview component mounted. User role:",
       user?.role,
     );
@@ -27,75 +27,27 @@ export default function SpecificationReview({ user }) {
 
   const loadReviews = async () => {
     try {
-      console.log("🔄 Fetching specification reviews...");
-
       const response = await api.get("/requests/assigned/specification");
-      console.log("📦 Full API Response:", response);
-
-      let data = response.data.data || response.data;
-
-      console.log("📦 Raw reviews data:", data);
-      console.log("📦 Data type:", typeof data);
-      console.log("📦 Is Array:", Array.isArray(data));
+      const data = response.data.data || response.data;
 
       if (Array.isArray(data)) {
-        console.log("✅ Found", data.length, "specifications to review");
-        console.log("📋 First item sample:", data[0]);
         setRequests(data);
       } else if (data && data.requests) {
-        console.log(
-          "✅ Found",
-          data.requests.length,
-          "specifications to review",
-        );
         setRequests(data.requests);
       } else {
-        console.log("⚠️ No specifications found");
-        console.log("📦 Unexpected data structure:", data);
         setRequests([]);
       }
     } catch (err) {
-      console.error("❌ Failed to load reviews:", {
-        message: err.message,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
-      setError("Failed to load specification reviews");
+      const errorMsg =
+        err.response?.data?.message || "Failed to load specification reviews";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReviewClick = async (request) => {
-    console.log("👁️ Opening review modal for request:", request.id);
-    setRequestDetailsLoading(true);
-
-    try {
-      const response = await api.get(`/requests/${request.id}`);
-      const details = response.data?.data || response.data;
-    setDetailsLoading(true);
-    } catch (err) {
-      const errorMsg =
-        err.response?.data?.message || "Failed to load request details";
-      setError(errorMsg);
-      setSelectedRequest(request);
-    } finally {
-      setRequestDetailsLoading(false);
-    }
-
-    setReviewNotes("");
-    setIsModalOpen(true);
-      setDetailsLoading(false);
-
-  const formatCurrency = (value) => {
-    const amount = Number(value);
-    return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "-";
-  };
-
   const getReviewItems = () => {
-    if (!selectedRequest) {
-      return [];
-    }
+    if (!selectedRequest) return [];
 
     if (Array.isArray(selectedRequest.items) && selectedRequest.items.length > 0) {
       return selectedRequest.items;
@@ -117,29 +69,91 @@ export default function SpecificationReview({ user }) {
     ];
   };
 
-  const handleSubmitReview = async () => {
+  const openReviewModal = async (request) => {
+    setError("");
+    setSuccess("");
+    setIsModalOpen(true);
+    setDetailsLoading(true);
+
+    try {
+      const response = await api.get(`/requests/${request.id}`);
+      const fullRequest = response.data.data || response.data;
+      setSelectedRequest(fullRequest);
+
+      const rows =
+        Array.isArray(fullRequest.items) && fullRequest.items.length > 0
+          ? fullRequest.items
+          : [
+              {
+                line_no: 1,
+                item_type: fullRequest.item_type,
+                item_name: fullRequest.item_name,
+                item_description: fullRequest.item_description,
+                technical_specifications: fullRequest.technical_specifications,
+                quantity: fullRequest.quantity,
+                estimated_cost: fullRequest.estimated_cost,
+                funding_source: fullRequest.funding_source,
+                department: fullRequest.department,
+                required_date: fullRequest.required_date,
+              },
+            ];
+
+      setItemDecisions(
+        rows.map((item, index) => ({
+          lineNo: Number(item.line_no || index + 1),
+          decision: "APPROVED",
+          message: "",
+        })),
+      );
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "Failed to load request details";
+      setError(errorMsg);
+      setIsModalOpen(false);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  const updateItemDecision = (lineNo, key, value) => {
+    setItemDecisions((prev) =>
+      prev.map((row) => (row.lineNo === lineNo ? { ...row, [key]: value } : row)),
+    );
+  };
+
+  const submitReview = async () => {
     if (!selectedRequest) return;
 
-    console.log("📤 Submitting review for request:", selectedRequest.id);
+    const missingMessage = itemDecisions.find(
+      (row) => !String(row.message || "").trim(),
+    );
+
+    if (missingMessage) {
+      setError(`Message is required for item #${missingMessage.lineNo}`);
+      return;
+    }
 
     setActionLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
-      const payload = { notes: reviewNotes };
-      console.log("📋 Review payload:", payload);
-
-      await api.post(`/specifications/${selectedRequest.id}/review`, payload);
-
-      console.log("✅ Review submitted successfully");
-
-      setIsModalOpen(false);
-      loadReviews();
-      setSelectedRequest(null);
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || "Failed to submit review";
-      console.error("❌ Review submission failed:", {
-        requestId: selectedRequest.id,
-        message: errorMsg,
+      await api.post(`/specifications/${selectedRequest.id}/review`, {
+        itemDecisions: itemDecisions.map((row) => ({
+          lineNo: row.lineNo,
+          decision: row.decision,
+          message: row.message.trim(),
+        })),
       });
+
+      setSuccess("Item-level specification decisions submitted successfully.");
+      setIsModalOpen(false);
+      setSelectedRequest(null);
+      setItemDecisions([]);
+      await loadReviews();
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "Failed to submit specification review";
       setError(errorMsg);
     } finally {
       setActionLoading(false);
@@ -152,142 +166,165 @@ export default function SpecificationReview({ user }) {
     <div className="spec-review">
       <div className="page-header">
         <h1>Specification Review</h1>
-        <p>Review technical specifications for pending requests</p>
+        <p>
+          DIRECTOR_ICT / MAINTENANCE_ENGINEER can approve, deny, or request
+          modification per item.
+        </p>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
+      {success && <Alert type="success">{success}</Alert>}
 
       {requests.length === 0 ? (
         <Card className="empty-state">
           <p>No specifications to review</p>
         </Card>
       ) : (
-        <>
-          <div style={{ marginBottom: "1rem", color: "#666" }}>
-            Found {requests.length} specification(s) to review
-          </div>
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "8px",
-              padding: "1.5rem",
-              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-              marginBottom: "1rem",
-            }}
-          >
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Request ID</th>
-                  <th>Item</th>
-                  <th>Department</th>
-                  <th>Submitted By</th>
-                  <th>Action</th>
+        <Card>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Item</th>
+                <th>Department</th>
+                <th>Submitted By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((req) => (
+                <tr key={req.id}>
+                  <td>{req.request_id}</td>
+                  <td>{req.item_name}</td>
+                  <td>{req.department}</td>
+                  <td>{req.requested_by_name}</td>
+                  <td>
+                    <Button size="sm" onClick={() => openReviewModal(req)}>
+                      Review Items
+                    </Button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {requests.map((req) => (
-                  <tr key={req.id}>
-                    <td>{req.request_id}</td>
-                    <td>{req.item_name}</td>
-                    <td>{req.department}</td>
-                    <td>{req.requested_by_name}</td>
-                    <td>
-                      <Button size="sm" onClick={() => handleReviewClick(req)}>
-                        Review
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
 
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Review Specifications"
+        onClose={() => {
+          if (!actionLoading) {
+            setIsModalOpen(false);
+            setSelectedRequest(null);
+            setItemDecisions([]);
+          }
+        }}
+        title="Item-level Specification Decision"
       >
-        {requestDetailsLoading ? (
+        {detailsLoading ? (
           <div className="loading-state">Loading request details...</div>
         ) : (
           selectedRequest && (
-          <div className="review-modal">
-            <div className="spec-info">
-              <div>
-                <strong>Request ID:</strong>{" "}
-                {selectedRequest.request_id || "N/A"}
+            <div className="review-modal">
+              <div className="spec-info">
+                <div>
+                  <strong>Request ID:</strong>{" "}
+                  {selectedRequest.request_id || selectedRequest.id}
+                </div>
+                <div>
+                  <strong>Status:</strong> {selectedRequest.status}
+                </div>
               </div>
-              <div>
-                <strong>Total Items:</strong> {getReviewItems().length}
-              </div>
-              <div>
-                <strong>Submitted By:</strong>{" "}
-                {selectedRequest.requested_by_name || "Unknown"}
-              </div>
-            </div>
 
-            <div className="review-items-table-wrap">
-              <table className="review-items-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Type</th>
-                    <th>Item Name</th>
-                    <th>Description</th>
-                    <th>Technical Specifications</th>
-                    <th>Funding Source</th>
-                    <th>Department</th>
-                    <th>Required Date</th>
-                    <th>Qty</th>
-                    <th>Estimated Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getReviewItems().map((item, index) => (
-                    <tr key={`review-item-${item.line_no || index + 1}`}>
-                      <td>{item.line_no || index + 1}</td>
-                      <td>{item.item_type || "-"}</td>
-                      <td>{item.item_name || "-"}</td>
-                      <td>{item.item_description || "-"}</td>
-                      <td>{item.technical_specifications || "-"}</td>
-                      <td>{item.funding_source || "-"}</td>
-                      <td>{item.department || "-"}</td>
-                      <td>
-                        {item.required_date
-                          ? new Date(item.required_date).toLocaleDateString()
-                          : "-"}
-                      </td>
-                      <td>{item.quantity ?? "-"}</td>
-                      <td>{formatCurrency(item.estimated_cost)}</td>
+              <div className="review-items-table-wrap">
+                <table className="review-items-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Type</th>
+                      <th>Item Name</th>
+                      <th>Qty</th>
+                      <th>Cost</th>
+                      <th>Decision</th>
+                      <th>Message to Requester</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {getReviewItems().map((item, index) => {
+                      const lineNo = Number(item.line_no || index + 1);
+                      const rowState =
+                        itemDecisions.find((row) => row.lineNo === lineNo) || {
+                          lineNo,
+                          decision: "APPROVED",
+                          message: "",
+                        };
 
-            <TextArea
-              label="Review Notes"
-              value={reviewNotes}
-              onChange={(e) => setReviewNotes(e.target.value)}
-              placeholder="Add your technical review notes..."
-            />
+                      return (
+                        <tr key={`spec-review-item-${lineNo}`}>
+                          <td>{lineNo}</td>
+                          <td>{item.item_type || "-"}</td>
+                          <td>{item.item_name || "-"}</td>
+                          <td>{item.quantity ?? "-"}</td>
+                          <td>${Number(item.estimated_cost || 0).toFixed(2)}</td>
+                          <td>
+                            <select
+                              className="item-decision-select"
+                              value={rowState.decision}
+                              onChange={(e) =>
+                                updateItemDecision(
+                                  lineNo,
+                                  "decision",
+                                  e.target.value,
+                                )
+                              }
+                              disabled={actionLoading}
+                            >
+                              <option value="APPROVED">Approve</option>
+                              <option value="REJECTED">Deny</option>
+                              <option value="REQUEST_MODIFICATION">
+                                Request Modification
+                              </option>
+                            </select>
+                          </td>
+                          <td>
+                            <textarea
+                              className="item-message-input"
+                              value={rowState.message}
+                              onChange={(e) =>
+                                updateItemDecision(
+                                  lineNo,
+                                  "message",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="Write message for requester"
+                              disabled={actionLoading}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="modal-actions">
-              <Button
-                variant="success"
-                onClick={handleSubmitReview}
-                disabled={actionLoading}
-              >
-                {actionLoading ? "Submitting..." : "Approve Specifications"}
-              </Button>
-              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
+              <div className="modal-actions">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedRequest(null);
+                    setItemDecisions([]);
+                  }}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={submitReview} disabled={actionLoading}>
+                  {actionLoading ? "Submitting..." : "Submit Item Decisions"}
+                </Button>
+              </div>
             </div>
-          </div>
           )
         )}
       </Modal>

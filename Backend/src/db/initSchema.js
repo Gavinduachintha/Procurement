@@ -235,6 +235,25 @@ export const initializeSchema = async () => {
       UNIQUE (purchase_request_id, approver_id)
     );
 
+    CREATE TABLE IF NOT EXISTS approval_item_decisions (
+      id BIGSERIAL PRIMARY KEY,
+      purchase_request_id BIGINT NOT NULL REFERENCES purchase_requests(id) ON DELETE CASCADE,
+      line_no INTEGER NOT NULL,
+      approver_id BIGINT NOT NULL REFERENCES users(id),
+      decision TEXT NOT NULL CHECK (decision IN ('APPROVED', 'REJECTED', 'REQUEST_MODIFICATION')),
+      message TEXT NOT NULL,
+      decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (purchase_request_id, line_no, approver_id)
+    );
+
+    ALTER TABLE approval_item_decisions
+    DROP CONSTRAINT IF EXISTS approval_item_decisions_decision_check;
+
+    ALTER TABLE approval_item_decisions
+    ADD CONSTRAINT approval_item_decisions_decision_check
+    CHECK (decision IN ('APPROVED', 'REJECTED', 'REQUEST_MODIFICATION'));
+
     CREATE TABLE IF NOT EXISTS jobs (
       id BIGSERIAL PRIMARY KEY,
       purchase_request_id BIGINT NOT NULL UNIQUE REFERENCES purchase_requests(id),

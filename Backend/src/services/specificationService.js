@@ -54,6 +54,66 @@ export const specificationService = {
         );
       }
 
+      const requestItems = await requestRepository.listItemsByRequestId(request.id);
+      if (!requestItems.length) {
+        throw new ApiError(400, "Request has no items to review");
+      }
+
+      const itemDecisions = Array.isArray(payload?.itemDecisions)
+        ? payload.itemDecisions
+        : [];
+
+      if (!itemDecisions.length) {
+        throw new ApiError(
+          400,
+          "Item-level decisions are required for specification review",
+        );
+      }
+
+      const validLineNos = new Set(requestItems.map((item) => Number(item.line_no)));
+      const normalizedItemDecisions = itemDecisions.map((entry, index) => {
+        const lineNo = Number(entry.lineNo ?? entry.line_no);
+        const decision = String(entry.decision || "")
+          .trim()
+          .toUpperCase();
+        const message = String(entry.message || "").trim();
+
+        if (!validLineNos.has(lineNo)) {
+          throw new ApiError(400, `Invalid item line number at row #${index + 1}`);
+        }
+
+        if (!["APPROVED", "REJECTED", "REQUEST_MODIFICATION"].includes(decision)) {
+          throw new ApiError(
+            400,
+            `Invalid decision for item line #${lineNo}. Use APPROVED, REJECTED, or REQUEST_MODIFICATION`,
+          );
+        }
+
+        if (!message) {
+          throw new ApiError(400, `Message is required for item line #${lineNo}`);
+        }
+
+        return { lineNo, decision, message };
+      });
+
+      const uniqueLineNos = new Set(
+        normalizedItemDecisions.map((entry) => entry.lineNo),
+      );
+      if (uniqueLineNos.size !== requestItems.length) {
+        throw new ApiError(
+          400,
+          "You must submit a decision and message for each item",
+        );
+      }
+
+      const decisionsText = normalizedItemDecisions
+        .sort((a, b) => a.lineNo - b.lineNo)
+        .map(
+          (entry) =>
+            `Item #${entry.lineNo}: ${entry.decision} - ${entry.message}`,
+        )
+        .join("\n");
+
       // Transform payload to use backend field names
       const reviewData = {
         purchaseRequestId: request.id,
@@ -61,9 +121,9 @@ export const specificationService = {
         reviewedSpecifications:
           payload.reviewedSpecifications ||
           payload.reviewed_specifications ||
-          request.technical_specifications,
+          decisionsText,
         reviewNotes:
-          payload.reviewNotes || payload.notes || payload.review_notes || "",
+          payload.reviewNotes || payload.notes || payload.review_notes || decisionsText,
         decision: "RETURNED_TO_REQUESTER",
       };
 
@@ -75,7 +135,7 @@ export const specificationService = {
 
       const updated = await requestRepository.updateSpecificationReviewResult(
         request.id,
-        reviewData.reviewedSpecifications,
+        decisionsText,
         REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
       );
 
@@ -88,7 +148,7 @@ export const specificationService = {
       await notificationService.notifyUsers([request.requester_id], {
         eventType: "SPEC_REVIEWED",
         subject: `Specification reviewed (${request.request_id})`,
-        message: `Specifications for ${request.request_id} were reviewed. Please confirm or request modification.`,
+        message: `Item-level specification decisions for ${request.request_id}:\n${decisionsText}\n\nPlease confirm or request modification.`,
       });
       console.log("✅ Backend: Requesting officer notified");
 
@@ -161,7 +221,10 @@ export const specificationService = {
       }
 
       console.log("✅ Backend: Specification review complete");
-      return updated;
+      return {
+        ...updated,
+        itemDecisions: normalizedItemDecisions,
+      };
     } catch (err) {
       console.error("❌ Backend: Specification review error:", {
         message: err.message,
