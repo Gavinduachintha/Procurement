@@ -54,7 +54,9 @@ export const specificationService = {
         );
       }
 
-      const requestItems = await requestRepository.listItemsByRequestId(request.id);
+      const requestItems = await requestRepository.listItemsByRequestId(
+        request.id,
+      );
       if (!requestItems.length) {
         throw new ApiError(400, "Request has no items to review");
       }
@@ -70,7 +72,9 @@ export const specificationService = {
         );
       }
 
-      const validLineNos = new Set(requestItems.map((item) => Number(item.line_no)));
+      const validLineNos = new Set(
+        requestItems.map((item) => Number(item.line_no)),
+      );
       const normalizedItemDecisions = itemDecisions.map((entry, index) => {
         const lineNo = Number(entry.lineNo ?? entry.line_no);
         const decision = String(entry.decision || "")
@@ -79,10 +83,15 @@ export const specificationService = {
         const message = String(entry.message || "").trim();
 
         if (!validLineNos.has(lineNo)) {
-          throw new ApiError(400, `Invalid item line number at row #${index + 1}`);
+          throw new ApiError(
+            400,
+            `Invalid item line number at row #${index + 1}`,
+          );
         }
 
-        if (!["APPROVED", "REJECTED", "REQUEST_MODIFICATION"].includes(decision)) {
+        if (
+          !["APPROVED", "REJECTED", "REQUEST_MODIFICATION"].includes(decision)
+        ) {
           throw new ApiError(
             400,
             `Invalid decision for item line #${lineNo}. Use APPROVED, REJECTED, or REQUEST_MODIFICATION`,
@@ -90,7 +99,10 @@ export const specificationService = {
         }
 
         if (!message) {
-          throw new ApiError(400, `Message is required for item line #${lineNo}`);
+          throw new ApiError(
+            400,
+            `Message is required for item line #${lineNo}`,
+          );
         }
 
         return { lineNo, decision, message };
@@ -123,7 +135,10 @@ export const specificationService = {
           payload.reviewed_specifications ||
           decisionsText,
         reviewNotes:
-          payload.reviewNotes || payload.notes || payload.review_notes || decisionsText,
+          payload.reviewNotes ||
+          payload.notes ||
+          payload.review_notes ||
+          decisionsText,
         decision: "RETURNED_TO_REQUESTER",
       };
 

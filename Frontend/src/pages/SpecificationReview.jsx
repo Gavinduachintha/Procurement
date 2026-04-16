@@ -49,7 +49,10 @@ export default function SpecificationReview({ user }) {
   const getReviewItems = () => {
     if (!selectedRequest) return [];
 
-    if (Array.isArray(selectedRequest.items) && selectedRequest.items.length > 0) {
+    if (
+      Array.isArray(selectedRequest.items) &&
+      selectedRequest.items.length > 0
+    ) {
       return selectedRequest.items;
     }
 
@@ -117,7 +120,9 @@ export default function SpecificationReview({ user }) {
 
   const updateItemDecision = (lineNo, key, value) => {
     setItemDecisions((prev) =>
-      prev.map((row) => (row.lineNo === lineNo ? { ...row, [key]: value } : row)),
+      prev.map((row) =>
+        row.lineNo === lineNo ? { ...row, [key]: value } : row,
+      ),
     );
   };
 
@@ -252,12 +257,13 @@ export default function SpecificationReview({ user }) {
                   <tbody>
                     {getReviewItems().map((item, index) => {
                       const lineNo = Number(item.line_no || index + 1);
-                      const rowState =
-                        itemDecisions.find((row) => row.lineNo === lineNo) || {
-                          lineNo,
-                          decision: "APPROVED",
-                          message: "",
-                        };
+                      const rowState = itemDecisions.find(
+                        (row) => row.lineNo === lineNo,
+                      ) || {
+                        lineNo,
+                        decision: "APPROVED",
+                        message: "",
+                      };
 
                       return (
                         <tr key={`spec-review-item-${lineNo}`}>
@@ -265,7 +271,9 @@ export default function SpecificationReview({ user }) {
                           <td>{item.item_type || "-"}</td>
                           <td>{item.item_name || "-"}</td>
                           <td>{item.quantity ?? "-"}</td>
-                          <td>${Number(item.estimated_cost || 0).toFixed(2)}</td>
+                          <td>
+                            ${Number(item.estimated_cost || 0).toFixed(2)}
+                          </td>
                           <td>
                             <select
                               className="item-decision-select"

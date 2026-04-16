@@ -62,7 +62,6 @@ export default function ApprovalDashboard({ user }) {
     }
   };
 
-
   if (loading) return <div className="loading-state">Loading approvals...</div>;
 
   return (
@@ -77,8 +76,8 @@ export default function ApprovalDashboard({ user }) {
       {error && <Alert type="error">{error}</Alert>}
 
       <Alert type="info">
-        Item-level technical decisions are handled by DIRECTOR_ICT / MAINTENANCE_ENGINEER
-        in Specification Review.
+        Item-level technical decisions are handled by DIRECTOR_ICT /
+        MAINTENANCE_ENGINEER in Specification Review.
       </Alert>
 
       {requests.length === 0 ? (
