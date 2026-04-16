@@ -17,6 +17,14 @@ export const requestController = {
     res.json(requests);
   }),
 
+  assignedForCheckerAll: asyncHandler(async (req, res) => {
+    const requests = await requestService.checkerAssignedRequests(
+      req.user.id,
+      true,
+    );
+    res.json(requests);
+  }),
+
   approvedWithoutJobs: asyncHandler(async (req, res) => {
     const requests = await requestService.approvedRequestsWithoutJobs();
     res.json(requests);

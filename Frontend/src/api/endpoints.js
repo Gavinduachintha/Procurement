@@ -25,6 +25,7 @@ export const specificationApi = {
 
 export const approvalApi = {
   listPending: () => api.get("/approvals/mine/pending"),
+  listAll: () => api.get("/approvals/mine/all"),
   decide: (id, data) => api.post(`/approvals/${id}/decision`, data),
 };
 

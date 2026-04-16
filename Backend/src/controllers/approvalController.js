@@ -15,4 +15,9 @@ export const approvalController = {
     const rows = await approvalService.myPending(req.user.id);
     res.json(rows);
   }),
+
+  myAll: asyncHandler(async (req, res) => {
+    const rows = await approvalService.myAll(req.user.id);
+    res.json(rows);
+  }),
 };

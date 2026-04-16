@@ -116,6 +116,23 @@ export const requestRepository = {
     return rows;
   },
 
+  async listAllAssignedForSpecificationChecker(checkerId) {
+    const { rows } = await query(
+      `SELECT pr.*, u.full_name AS requested_by_name
+       FROM purchase_requests pr
+       LEFT JOIN users u ON pr.requester_id = u.id
+       WHERE pr.specification_checker_id = $1
+       ORDER BY
+         CASE
+           WHEN pr.status IN ('SPEC_REVIEW_PENDING', 'SPEC_REWORK_REQUESTED') THEN 0
+           ELSE 1
+         END,
+         pr.updated_at DESC`,
+      [checkerId],
+    );
+    return rows;
+  },
+
   async findById(id) {
     const { rows } = await query(
       "SELECT * FROM purchase_requests WHERE id = $1",

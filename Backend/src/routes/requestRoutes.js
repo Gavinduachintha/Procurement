@@ -9,6 +9,14 @@ router.post("/", requestController.create);
 router.get("/mine", requestController.mine);
 router.get("/assigned/specification", requestController.assignedForChecker);
 router.get("/assigned/specifications", requestController.assignedForChecker);
+router.get(
+  "/assigned/specification/all",
+  requestController.assignedForCheckerAll,
+);
+router.get(
+  "/assigned/specifications/all",
+  requestController.assignedForCheckerAll,
+);
 router.get("/approved/without-jobs", requestController.approvedWithoutJobs);
 router.get("/:id", requestController.getById);
 

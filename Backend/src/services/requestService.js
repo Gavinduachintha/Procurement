@@ -337,7 +337,13 @@ export const requestService = {
     return requestRepository.listByRequesterId(userId);
   },
 
-  async checkerAssignedRequests(checkerId) {
+  async checkerAssignedRequests(checkerId, includeHistory = false) {
+    if (includeHistory) {
+      return requestRepository.listAllAssignedForSpecificationChecker(
+        checkerId,
+      );
+    }
+
     return requestRepository.listAssignedForSpecificationChecker(checkerId);
   },
 

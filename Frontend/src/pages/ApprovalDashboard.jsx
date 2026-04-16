@@ -24,19 +24,19 @@ export default function ApprovalDashboard({ user }) {
       "✅ ApprovalDashboard component mounted. User role:",
       user?.role,
     );
-    loadPendingApprovals();
+    loadApprovals();
   }, []);
 
-  const loadPendingApprovals = async () => {
+  const loadApprovals = async () => {
     try {
       console.log(
-        "🔄 Fetching pending approvals for user:",
+        "🔄 Fetching approvals for user:",
         user?.id,
         "role:",
         user?.role,
       );
 
-      const response = await api.get("/approvals/mine/pending");
+      const response = await api.get("/approvals/mine/all");
       let data = response.data.data || response.data;
 
       console.log("📦 Raw approvals data:", data);
@@ -44,16 +44,16 @@ export default function ApprovalDashboard({ user }) {
       console.log("📦 Full response:", response);
 
       if (Array.isArray(data)) {
-        console.log("✅ Found", data.length, "pending approvals");
+        console.log("✅ Found", data.length, "approvals");
         if (data.length > 0) {
           console.log("📋 First approval item:", data[0]);
         }
         setRequests(data);
       } else if (data && data.requests) {
-        console.log("✅ Found", data.requests.length, "pending approvals");
+        console.log("✅ Found", data.requests.length, "approvals");
         setRequests(data.requests);
       } else {
-        console.log("⚠️ No pending approvals found");
+        console.log("⚠️ No approvals found");
         console.log("📦 Data type:", typeof data);
         setRequests([]);
       }
@@ -105,7 +105,7 @@ export default function ApprovalDashboard({ user }) {
       setSuccess("Final approval decision submitted successfully.");
       setIsDecisionModalOpen(false);
       setSelectedRequest(null);
-      await loadPendingApprovals();
+      await loadApprovals();
     } catch (err) {
       const errorMsg =
         err.response?.data?.message || "Failed to submit approval decision";
@@ -119,11 +119,25 @@ export default function ApprovalDashboard({ user }) {
       ) {
         setIsDecisionModalOpen(false);
         setSelectedRequest(null);
-        await loadPendingApprovals();
+        await loadApprovals();
       }
     } finally {
       setDecisionLoading(false);
     }
+  };
+
+  const pendingRequests = requests.filter(
+    (row) => row.approval_decision === "PENDING",
+  );
+  const historyRequests = requests.filter(
+    (row) => row.approval_decision !== "PENDING",
+  );
+
+  const formatDateTime = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleString();
   };
 
   if (loading) return <div className="loading-state">Loading approvals...</div>;
@@ -146,47 +160,96 @@ export default function ApprovalDashboard({ user }) {
 
       {requests.length === 0 ? (
         <Card className="empty-state">
-          <p>No requests assigned for viewing</p>
+          <p>No approvals assigned yet</p>
         </Card>
       ) : (
-        <Card>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Request ID</th>
-                <th>Item</th>
-                <th>Department</th>
-                <th>Amount</th>
-                <th>Funding</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((req) => (
-                <tr key={req.id}>
-                  <td>{req.id}</td>
-                  <td>{req.item_name}</td>
-                  <td>{req.department}</td>
-                  <td>${req.estimated_cost}</td>
-                  <td>{req.funding_source}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <Link
-                        to={`/request/${req.purchase_request_id || req.id}`}
-                        className="btn btn-sm btn-secondary"
-                      >
-                        <Eye size={16} />
-                      </Link>
-                      <Button size="sm" onClick={() => openDecisionModal(req)}>
-                        Decide
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <>
+          <Card>
+            <h3>Pending Work</h3>
+            {pendingRequests.length === 0 ? (
+              <p>No pending approvals.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Item</th>
+                    <th>Department</th>
+                    <th>Amount</th>
+                    <th>Funding</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingRequests.map((req) => (
+                    <tr key={`${req.id}-pending`}>
+                      <td>{req.request_id || req.id}</td>
+                      <td>{req.item_name}</td>
+                      <td>{req.department}</td>
+                      <td>${req.estimated_cost}</td>
+                      <td>{req.funding_source}</td>
+                      <td>
+                        <div className="action-buttons">
+                          <Link
+                            to={`/request/${req.purchase_request_id || req.id}`}
+                            className="btn btn-sm btn-secondary"
+                          >
+                            <Eye size={16} />
+                          </Link>
+                          <Button
+                            size="sm"
+                            onClick={() => openDecisionModal(req)}
+                          >
+                            Decide
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <Card>
+            <h3>Previous Work</h3>
+            {historyRequests.length === 0 ? (
+              <p>No previous decisions yet.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Department</th>
+                    <th>Final Decision</th>
+                    <th>Decided At</th>
+                    <th>Comments</th>
+                    <th>View</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRequests.map((req) => (
+                    <tr key={`${req.id}-history`}>
+                      <td>{req.request_id || req.id}</td>
+                      <td>{req.department || "-"}</td>
+                      <td>{req.approval_decision || "-"}</td>
+                      <td>{formatDateTime(req.approval_decided_at)}</td>
+                      <td>{req.approval_comments || "-"}</td>
+                      <td>
+                        <Link
+                          to={`/request/${req.purchase_request_id || req.id}`}
+                          className="btn btn-sm btn-secondary"
+                        >
+                          <Eye size={16} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </>
       )}
 
       <Modal

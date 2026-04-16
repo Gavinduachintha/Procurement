@@ -142,4 +142,8 @@ export const approvalService = {
   async myPending(userId) {
     return approvalRepository.listPendingByApprover(userId);
   },
+
+  async myAll(userId) {
+    return approvalRepository.listAllByApprover(userId);
+  },
 };

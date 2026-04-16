@@ -25,11 +25,11 @@ export default function Dashboard({ user }) {
       if (user?.role === "REQUESTING_OFFICER") {
         endpoint = "/requests/mine";
       } else if (["DEAN", "VICE_CHANCELLOR"].includes(user?.role)) {
-        endpoint = "/approvals/mine/pending"; // Use approvals pending endpoint
+        endpoint = "/approvals/mine/all";
       } else if (
         ["DIRECTOR_ICT", "MAINTENANCE_ENGINEER"].includes(user?.role)
       ) {
-        endpoint = "/requests/assigned/specification"; // Specifications to review
+        endpoint = "/requests/assigned/specification/all";
       } else if (
         [
           "SUPPLY_BRANCH",
@@ -114,6 +114,7 @@ export default function Dashboard({ user }) {
       SPEC_CHECKED: "badge-info",
       SPEC_REWORK_REQUESTED: "badge-warning",
       APPROVAL_PENDING: "badge-warning",
+      PENDING: "badge-warning",
       APPROVED: "badge-success",
       REJECTED: "badge-danger",
       CLARIFICATION_REQUESTED: "badge-warning",
@@ -188,8 +189,15 @@ export default function Dashboard({ user }) {
                   <td>{req.item_name || req.request_id || "-"}</td>
                   <td>{req.department || "-"}</td>
                   <td>
-                    <span className={`badge ${getStatusBadge(req.status)}`}>
-                      {req.status || req.request_status || "-"}
+                    <span
+                      className={`badge ${getStatusBadge(
+                        req.approval_decision || req.status,
+                      )}`}
+                    >
+                      {req.approval_decision ||
+                        req.status ||
+                        req.request_status ||
+                        "-"}
                     </span>
                   </td>
                   <td>${req.estimated_cost || req.total_amount || "0.00"}</td>

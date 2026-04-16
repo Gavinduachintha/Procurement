@@ -126,4 +126,25 @@ export const approvalRepository = {
     }
     return rows;
   },
+
+  async listAllByApprover(approverId) {
+    const { rows } = await query(
+      `SELECT
+         pr.*, 
+         a.decision AS approval_decision,
+         a.comments AS approval_comments,
+         a.decided_at AS approval_decided_at,
+         a.approver_role
+       FROM approvals a
+       JOIN purchase_requests pr ON pr.id = a.purchase_request_id
+       WHERE a.approver_id = $1
+       ORDER BY
+         CASE WHEN a.decision = 'PENDING' THEN 0 ELSE 1 END,
+         COALESCE(a.decided_at, pr.updated_at) DESC,
+         pr.updated_at DESC`,
+      [approverId],
+    );
+
+    return rows;
+  },
 };

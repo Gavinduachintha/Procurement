@@ -27,7 +27,7 @@ export default function SpecificationReview({ user }) {
 
   const loadReviews = async () => {
     try {
-      const response = await api.get("/requests/assigned/specification");
+      const response = await api.get("/requests/assigned/specification/all");
       const data = response.data.data || response.data;
 
       if (Array.isArray(data)) {
@@ -167,6 +167,24 @@ export default function SpecificationReview({ user }) {
 
   if (loading) return <div className="loading-state">Loading reviews...</div>;
 
+  const pendingStatuses = new Set([
+    "SPEC_REVIEW_PENDING",
+    "SPEC_REWORK_REQUESTED",
+  ]);
+  const pendingRequests = requests.filter((row) =>
+    pendingStatuses.has(row.status),
+  );
+  const historyRequests = requests.filter(
+    (row) => !pendingStatuses.has(row.status),
+  );
+
+  const formatDateTime = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleString();
+  };
+
   return (
     <div className="spec-review">
       <div className="page-header">
@@ -185,34 +203,73 @@ export default function SpecificationReview({ user }) {
           <p>No specifications to review</p>
         </Card>
       ) : (
-        <Card>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Request ID</th>
-                <th>Item</th>
-                <th>Department</th>
-                <th>Submitted By</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((req) => (
-                <tr key={req.id}>
-                  <td>{req.request_id}</td>
-                  <td>{req.item_name}</td>
-                  <td>{req.department}</td>
-                  <td>{req.requested_by_name}</td>
-                  <td>
-                    <Button size="sm" onClick={() => openReviewModal(req)}>
-                      Review Items
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+        <>
+          <Card>
+            <h3>Pending Work</h3>
+            {pendingRequests.length === 0 ? (
+              <p>No pending specification reviews.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Item</th>
+                    <th>Department</th>
+                    <th>Submitted By</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingRequests.map((req) => (
+                    <tr key={`${req.id}-pending`}>
+                      <td>{req.request_id}</td>
+                      <td>{req.item_name}</td>
+                      <td>{req.department}</td>
+                      <td>{req.requested_by_name}</td>
+                      <td>
+                        <Button size="sm" onClick={() => openReviewModal(req)}>
+                          Review Items
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+
+          <Card>
+            <h3>Previous Work</h3>
+            {historyRequests.length === 0 ? (
+              <p>No previous specification reviews yet.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Item</th>
+                    <th>Department</th>
+                    <th>Submitted By</th>
+                    <th>Current Status</th>
+                    <th>Last Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRequests.map((req) => (
+                    <tr key={`${req.id}-history`}>
+                      <td>{req.request_id}</td>
+                      <td>{req.item_name}</td>
+                      <td>{req.department}</td>
+                      <td>{req.requested_by_name}</td>
+                      <td>{req.status}</td>
+                      <td>{formatDateTime(req.updated_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Card>
+        </>
       )}
 
       <Modal
