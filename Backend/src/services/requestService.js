@@ -58,7 +58,11 @@ export const requestService = {
       const quantity = Number(item.quantity);
       const estimatedCost = Number(item.estimated_cost || item.estimatedCost);
       const fundingSource = String(
-        item.funding_source || item.fundingSource || payload.funding_source || payload.fundingSource || "",
+        item.funding_source ||
+          item.fundingSource ||
+          payload.funding_source ||
+          payload.fundingSource ||
+          "",
       )
         .trim()
         .toUpperCase();
@@ -66,7 +70,11 @@ export const requestService = {
         item.department || payload.department || user.department || "",
       ).trim();
       const requiredDate = String(
-        item.required_date || item.requiredDate || payload.required_date || payload.requiredDate || "",
+        item.required_date ||
+          item.requiredDate ||
+          payload.required_date ||
+          payload.requiredDate ||
+          "",
       ).trim();
 
       if (!["IT", "NON_IT"].includes(itemType)) {
@@ -109,11 +117,17 @@ export const requestService = {
       }
 
       if (!department) {
-        throw new ApiError(400, `Department is required for item #${index + 1}`);
+        throw new ApiError(
+          400,
+          `Department is required for item #${index + 1}`,
+        );
       }
 
       if (!requiredDate || Number.isNaN(Date.parse(requiredDate))) {
-        throw new ApiError(400, `Valid required date is required for item #${index + 1}`);
+        throw new ApiError(
+          400,
+          `Valid required date is required for item #${index + 1}`,
+        );
       }
 
       const today = new Date();
@@ -174,8 +188,13 @@ export const requestService = {
     const createdRequests = [];
 
     for (const group of Object.values(groupedByRequestAttributes)) {
-      const { itemType, fundingSource, department, requiredDate, items: itemsForType } =
-        group;
+      const {
+        itemType,
+        fundingSource,
+        department,
+        requiredDate,
+        items: itemsForType,
+      } = group;
 
       const checkerRole =
         itemType === "IT"

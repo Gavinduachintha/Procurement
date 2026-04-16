@@ -167,7 +167,9 @@ export default function RequestSubmission({ user }) {
     );
 
     if (invalidDateIndex !== -1) {
-      setError(`Required date cannot be before today for item #${invalidDateIndex + 1}`);
+      setError(
+        `Required date cannot be before today for item #${invalidDateIndex + 1}`,
+      );
       return null;
     }
 
@@ -402,7 +404,11 @@ export default function RequestSubmission({ user }) {
                       options={fundingOptions}
                       value={item.funding_source}
                       onChange={(e) =>
-                        handleItemChange(index, "funding_source", e.target.value)
+                        handleItemChange(
+                          index,
+                          "funding_source",
+                          e.target.value,
+                        )
                       }
                       required
                     />
@@ -487,7 +493,10 @@ export default function RequestSubmission({ user }) {
                               formData.items
                                 .filter((item) => item.department)
                                 .map((item) =>
-                                  getOptionLabel(departmentOptions, item.department),
+                                  getOptionLabel(
+                                    departmentOptions,
+                                    item.department,
+                                  ),
                                 ),
                             ),
                           ].join(", ")
@@ -644,10 +653,12 @@ export default function RequestSubmission({ user }) {
                     </strong>
                     <div>Name: {item.item_name}</div>
                     <div>
-                      Funding Source: {getOptionLabel(fundingOptions, item.funding_source)}
+                      Funding Source:{" "}
+                      {getOptionLabel(fundingOptions, item.funding_source)}
                     </div>
                     <div>
-                      Department: {getOptionLabel(departmentOptions, item.department)}
+                      Department:{" "}
+                      {getOptionLabel(departmentOptions, item.department)}
                     </div>
                     <div>Required Date: {item.required_date}</div>
                     <div>Quantity: {item.quantity}</div>
