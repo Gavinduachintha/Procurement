@@ -30,6 +30,13 @@ export const REQUEST_STATUS = {
 
 export const FUNDING_SOURCES = ["MPP", "SELF_FUND", "SPECIAL_FUND"];
 export const ITEM_TYPES = ["IT", "NON_IT"];
+export const FACULTY_UNITS = ["FAS", "FOT", "FBSF", "FOM", "FAPM", "FLFN"];
+export const SERVICE_UNITS = ["ENGLISH_UNIT", "ICT_CENTER"];
+export const REQUEST_UNITS = [...FACULTY_UNITS, ...SERVICE_UNITS];
+
+export const getApprovalRoleForUnit = (unit) =>
+  FACULTY_UNITS.includes(unit) ? USER_ROLES.DEAN : USER_ROLES.VICE_CHANCELLOR;
+
 export const PROCUREMENT_METHODS = [
   "SQ",
   "HQ",

@@ -4,10 +4,11 @@ import { approvalRepository } from "../repositories/approvalRepository.js";
 import { ApiError } from "../utils/apiError.js";
 import { buildRequestNumber } from "../utils/jobNumber.js";
 import {
-  APPROVER_ROLES,
   FUNDING_SOURCES,
+  REQUEST_UNITS,
   REQUEST_STATUS,
   USER_ROLES,
+  getApprovalRoleForUnit,
 } from "../utils/constants.js";
 import { notificationService } from "./notificationService.js";
 
@@ -21,6 +22,12 @@ export const requestService = {
     console.log("📋 Backend: Received payload:", payload);
 
     const normalizeItemType = (value) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+
+    const normalizeUnit = (value) =>
       String(value || "")
         .trim()
         .toUpperCase()
@@ -66,9 +73,9 @@ export const requestService = {
       )
         .trim()
         .toUpperCase();
-      const department = String(
+      const department = normalizeUnit(
         item.department || payload.department || user.department || "",
-      ).trim();
+      );
       const requiredDate = String(
         item.required_date ||
           item.requiredDate ||
@@ -119,7 +126,14 @@ export const requestService = {
       if (!department) {
         throw new ApiError(
           400,
-          `Department is required for item #${index + 1}`,
+          `Faculty/Unit is required for item #${index + 1}`,
+        );
+      }
+
+      if (!REQUEST_UNITS.includes(department)) {
+        throw new ApiError(
+          400,
+          `Faculty/Unit is invalid for item #${index + 1}`,
         );
       }
 
@@ -177,14 +191,6 @@ export const requestService = {
       return acc;
     }, {});
 
-    const approvers = (
-      await Promise.all(
-        APPROVER_ROLES.map((role) => userRepository.findByRole(role)),
-      )
-    ).flat();
-
-    console.log("✅ Backend: Found", approvers.length, "approver(s)");
-
     const createdRequests = [];
 
     for (const group of Object.values(groupedByRequestAttributes)) {
@@ -200,6 +206,22 @@ export const requestService = {
         itemType === "IT"
           ? USER_ROLES.DIRECTOR_ICT
           : USER_ROLES.MAINTENANCE_ENGINEER;
+
+      const approverRole = getApprovalRoleForUnit(department);
+      const approvers =
+        approverRole === USER_ROLES.DEAN
+          ? await userRepository.findByRoleAndDepartment(
+              approverRole,
+              department,
+            )
+          : await userRepository.findByRole(approverRole);
+
+      if (!approvers.length) {
+        throw new ApiError(
+          400,
+          `No available approver for role ${approverRole} (${department} faculty/unit)`,
+        );
+      }
 
       console.log("🔍 Backend: Looking for checker with role:", checkerRole);
 
@@ -289,7 +311,7 @@ export const requestService = {
         {
           eventType: "REQUEST_SUBMITTED",
           subject: `Purchase request submitted (${assigned.request_id})`,
-          message: `Request ${assigned.request_id} (${itemType}) has been submitted and sent for specification checking.`,
+          message: `Request ${assigned.request_id} (${itemType}, ${department}) has been submitted and sent for specification checking. Final approver role: ${approverRole}.`,
         },
       );
 

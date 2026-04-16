@@ -1,5 +1,6 @@
 .spec-review {
-  max-width: 1200px;
+  max-width: none;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -101,6 +102,7 @@
   border: 1px solid #bdc3c7;
   border-radius: 4px;
   background: #fff;
+  color: #2c3e50;
 }
 
 .item-message-input {
@@ -110,6 +112,8 @@
   padding: 0.5rem;
   border: 1px solid #bdc3c7;
   border-radius: 4px;
+  background: #ffffff;
+  color: #2c3e50;
   resize: vertical;
   font-family: inherit;
   font-size: 0.9rem;

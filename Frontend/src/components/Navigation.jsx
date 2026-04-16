@@ -44,9 +44,7 @@ export default function Navigation({ user, onLogout }) {
       });
     }
 
-    if (
-      ["DEAN", "REGISTRAR", "BURSAR", "VICE_CHANCELLOR"].includes(user?.role)
-    ) {
+    if (["DEAN", "VICE_CHANCELLOR"].includes(user?.role)) {
       links.push({
         to: "/approvals",
         label: "Approvals",

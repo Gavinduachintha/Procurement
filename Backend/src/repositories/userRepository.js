@@ -33,4 +33,16 @@ export const userRepository = {
     );
     return rows;
   },
+
+  async findByRoleAndDepartment(role, department) {
+    const { rows } = await query(
+      `SELECT id, full_name, email, role, department
+       FROM users
+       WHERE role = $1
+         AND UPPER(REPLACE(REPLACE(COALESCE(department, ''), ' ', '_'), '-', '_')) = $2
+       ORDER BY id ASC`,
+      [role, department],
+    );
+    return rows;
+  },
 };

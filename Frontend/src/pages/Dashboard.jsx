@@ -24,9 +24,7 @@ export default function Dashboard({ user }) {
       // Use role-specific endpoints for requests
       if (user?.role === "REQUESTING_OFFICER") {
         endpoint = "/requests/mine";
-      } else if (
-        ["DEAN", "REGISTRAR", "BURSAR", "VICE_CHANCELLOR"].includes(user?.role)
-      ) {
+      } else if (["DEAN", "VICE_CHANCELLOR"].includes(user?.role)) {
         endpoint = "/approvals/mine/pending"; // Use approvals pending endpoint
       } else if (
         ["DIRECTOR_ICT", "MAINTENANCE_ENGINEER"].includes(user?.role)

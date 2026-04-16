@@ -63,9 +63,9 @@
 
 **Responsible Officials:**
 - Dean
-- Registrar
+<!-- - Registrar
 - Bursar
-- Vice Chancellor
+- Vice Chancellor -->
 
 **Approval Checks:**
 - Item exists in **Master Procurement Plan (MPP)**?

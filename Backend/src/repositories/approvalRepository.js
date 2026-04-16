@@ -75,6 +75,18 @@ export const approvalRepository = {
     return rows;
   },
 
+  async findByRequestAndApprover(purchaseRequestId, approverId) {
+    const { rows } = await query(
+      `SELECT *
+       FROM approvals
+       WHERE purchase_request_id = $1 AND approver_id = $2
+       LIMIT 1`,
+      [purchaseRequestId, approverId],
+    );
+
+    return rows[0] || null;
+  },
+
   async getApprovalSummary(purchaseRequestId) {
     const { rows } = await query(
       `SELECT

@@ -53,11 +53,23 @@ export default function RequestSubmission({ user }) {
   ];
 
   const departmentOptions = [
+    { label: "Faculty of Applied Sciences (FAS)", value: "FAS" },
+    { label: "Faculty of Technology (FOT)", value: "FOT" },
+    {
+      label: "Faculty of Business Studies and Finance (FBSF)",
+      value: "FBSF",
+    },
+    { label: "Faculty of Medicine (FOM)", value: "FOM" },
+    {
+      label: "Faculty of Agriculture and Plantation Management (FAPM)",
+      value: "FAPM",
+    },
+    {
+      label: "Faculty of Livestock, Fisheries and Nutrition (FLFN)",
+      value: "FLFN",
+    },
+    { label: "English Unit", value: "ENGLISH_UNIT" },
     { label: "ICT Center", value: "ICT_CENTER" },
-    { label: "Maintenance", value: "MAINTENANCE" },
-    { label: "Administration", value: "ADMINISTRATION" },
-    { label: "Academic Affairs", value: "ACADEMIC_AFFAIRS" },
-    { label: "Student Services", value: "STUDENT_SERVICES" },
   ];
 
   const handleChange = (e) => {
@@ -413,7 +425,7 @@ export default function RequestSubmission({ user }) {
                       required
                     />
                     <Select
-                      label="Department *"
+                      label="Faculty / Unit *"
                       options={departmentOptions}
                       value={item.department}
                       onChange={(e) =>
@@ -485,7 +497,7 @@ export default function RequestSubmission({ user }) {
                           ].join(", ")
                         : "-"}
                     </td>
-                    <th>Departments</th>
+                    <th>Faculties / Units</th>
                     <td>
                       {formData.items.some((item) => item.department)
                         ? [
@@ -543,7 +555,7 @@ export default function RequestSubmission({ user }) {
                     <th>Description</th>
                     <th>Technical Specifications</th>
                     <th>Funding Source</th>
-                    <th>Department</th>
+                    <th>Faculty / Unit</th>
                     <th>Required Date</th>
                     <th>Qty</th>
                     <th>Estimated Cost</th>
@@ -627,7 +639,7 @@ export default function RequestSubmission({ user }) {
                   {submissionPreview.fundingSources.join(", ")}
                 </div>
                 <div>
-                  <strong>Departments:</strong>{" "}
+                  <strong>Faculties / Units:</strong>{" "}
                   {submissionPreview.departments.join(", ")}
                 </div>
                 <div>
@@ -657,7 +669,7 @@ export default function RequestSubmission({ user }) {
                       {getOptionLabel(fundingOptions, item.funding_source)}
                     </div>
                     <div>
-                      Department:{" "}
+                      Faculty / Unit:{" "}
                       {getOptionLabel(departmentOptions, item.department)}
                     </div>
                     <div>Required Date: {item.required_date}</div>

@@ -1,9 +1,10 @@
 import { requestRepository } from "../repositories/requestRepository.js";
+import { approvalRepository } from "../repositories/approvalRepository.js";
 import { userRepository } from "../repositories/userRepository.js";
 import { specificationRepository } from "../repositories/specificationRepository.js";
 import { ApiError } from "../utils/apiError.js";
 import {
-  APPROVER_ROLES,
+  getApprovalRoleForUnit,
   REQUEST_STATUS,
   USER_ROLES,
 } from "../utils/constants.js";
@@ -167,15 +168,10 @@ export const specificationService = {
       });
       console.log("✅ Backend: Requesting officer notified");
 
-      // Notify all stakeholders (Dean, Registrar, Bursar, Vice Chancellor)
+      // Notify final approval stakeholders (Dean / Vice Chancellor)
       try {
         console.log("📧 Backend: Notifying stakeholders...");
-        const stakeholderRoles = [
-          USER_ROLES.DEAN,
-          USER_ROLES.REGISTRAR,
-          USER_ROLES.BURSAR,
-          USER_ROLES.VICE_CHANCELLOR,
-        ];
+        const stakeholderRoles = [USER_ROLES.DEAN, USER_ROLES.VICE_CHANCELLOR];
 
         // Get users for each stakeholder role
         const stakeholderResults = await Promise.all(
@@ -295,29 +291,33 @@ export const specificationService = {
     console.log("📋 Backend: Action:", action);
 
     if (action === "ACCEPT") {
+      const approverRole = getApprovalRoleForUnit(request.department);
+
       const updated = await requestRepository.updateStatus(
         request.id,
-        REQUEST_STATUS.APPROVED,
+        REQUEST_STATUS.APPROVAL_PENDING,
       );
 
-      console.log("✅ Backend: Request status updated to APPROVED");
+      console.log("✅ Backend: Request status updated to APPROVAL_PENDING");
 
       await notificationService.notifyUsers([request.requester_id], {
         eventType: "SPEC_CONFIRMED",
         subject: `Specification accepted (${request.request_id})`,
-        message: `Request ${request.request_id} is approved and ready for procurement.`,
+        message: `Request ${request.request_id} is now pending final approval by ${approverRole}.`,
       });
 
-      await notificationService.notifyByRoles(APPROVER_ROLES, {
-        eventType: "REQUEST_APPROVED_VIEW_ONLY",
-        subject: `Request available for view (${request.request_id})`,
-        message: `Request ${request.request_id} has been approved. You can view request details and notifications (no action required).`,
-      });
+      const approvalSlots = await approvalRepository.listByRequest(request.id);
+      const targetedApproverIds = approvalSlots
+        .filter(
+          (slot) =>
+            slot.approver_role === approverRole && slot.decision === "PENDING",
+        )
+        .map((slot) => slot.approver_id);
 
-      await notificationService.notifyByRoles([USER_ROLES.SUPPLY_BRANCH], {
-        eventType: "REQUEST_READY_FOR_PROCUREMENT",
-        subject: `Request ready for procurement (${request.request_id})`,
-        message: `Request ${request.request_id} is approved and ready for procurement workflow.`,
+      await notificationService.notifyUsers(targetedApproverIds, {
+        eventType: "REQUEST_APPROVAL_REQUIRED",
+        subject: `Approval required (${request.request_id})`,
+        message: `Request ${request.request_id} is awaiting your final approval for ${request.department}.`,
       });
 
       return updated;

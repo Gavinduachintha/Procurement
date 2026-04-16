@@ -4,12 +4,20 @@ import { Eye } from "lucide-react";
 import api from "../api/client";
 import Card from "../components/Card";
 import Alert from "../components/Alert";
+import Button from "../components/Button";
+import Modal from "../components/Modal";
 import "./ApprovalDashboard.css";
 
 export default function ApprovalDashboard({ user }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [decision, setDecision] = useState("APPROVED");
+  const [comments, setComments] = useState("");
+  const [decisionLoading, setDecisionLoading] = useState(false);
 
   useEffect(() => {
     console.log(
@@ -62,22 +70,78 @@ export default function ApprovalDashboard({ user }) {
     }
   };
 
+  const openDecisionModal = (request) => {
+    setError("");
+    setSuccess("");
+    setSelectedRequest(request);
+    setDecision("APPROVED");
+    setComments("");
+    setIsDecisionModalOpen(true);
+  };
+
+  const submitDecision = async () => {
+    if (!selectedRequest) {
+      return;
+    }
+
+    if (
+      (decision === "REJECTED" || decision === "CLARIFICATION_REQUESTED") &&
+      !comments.trim()
+    ) {
+      setError("Comments are required for Reject or Request Clarification.");
+      return;
+    }
+
+    setDecisionLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      await api.post(`/approvals/${selectedRequest.id}/decision`, {
+        decision,
+        comments: comments.trim(),
+      });
+
+      setSuccess("Final approval decision submitted successfully.");
+      setIsDecisionModalOpen(false);
+      setSelectedRequest(null);
+      await loadPendingApprovals();
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "Failed to submit approval decision";
+      setError(errorMsg);
+
+      // If request state changed meanwhile (already decided/not pending), sync table.
+      if (
+        /not in a final approval state|already submitted|already completed/i.test(
+          errorMsg,
+        )
+      ) {
+        setIsDecisionModalOpen(false);
+        setSelectedRequest(null);
+        await loadPendingApprovals();
+      }
+    } finally {
+      setDecisionLoading(false);
+    }
+  };
+
   if (loading) return <div className="loading-state">Loading approvals...</div>;
 
   return (
     <div className="approval-dashboard">
       <div className="page-header">
         <h1>Approval Dashboard</h1>
-        <p>
-          Receive notifications and view requests. No approval action required.
-        </p>
+        <p>Dean / Vice Chancellor final approval stage.</p>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
+      {success && <Alert type="success">{success}</Alert>}
 
       <Alert type="info">
         Item-level technical decisions are handled by DIRECTOR_ICT /
-        MAINTENANCE_ENGINEER in Specification Review.
+        MAINTENANCE_ENGINEER in Specification Review. This stage captures final
+        decision only.
       </Alert>
 
       {requests.length === 0 ? (
@@ -113,6 +177,9 @@ export default function ApprovalDashboard({ user }) {
                       >
                         <Eye size={16} />
                       </Link>
+                      <Button size="sm" onClick={() => openDecisionModal(req)}>
+                        Decide
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -121,6 +188,75 @@ export default function ApprovalDashboard({ user }) {
           </table>
         </Card>
       )}
+
+      <Modal
+        isOpen={isDecisionModalOpen}
+        onClose={() => {
+          if (!decisionLoading) {
+            setIsDecisionModalOpen(false);
+            setSelectedRequest(null);
+          }
+        }}
+        title="Final Approval Decision"
+      >
+        {selectedRequest && (
+          <div className="final-decision-modal">
+            <div className="request-summary">
+              <div>
+                <strong>Request:</strong>{" "}
+                {selectedRequest.request_id || selectedRequest.id}
+              </div>
+              <div>
+                <strong>Faculty / Unit:</strong> {selectedRequest.department}
+              </div>
+            </div>
+
+            <div className="decision-form-row">
+              <label htmlFor="final-decision-select">Decision</label>
+              <select
+                id="final-decision-select"
+                className="final-decision-select"
+                value={decision}
+                onChange={(e) => setDecision(e.target.value)}
+                disabled={decisionLoading}
+              >
+                <option value="APPROVED">Approve</option>
+                <option value="REJECTED">Reject</option>
+                <option value="CLARIFICATION_REQUESTED">
+                  Request Clarification
+                </option>
+              </select>
+            </div>
+
+            <div className="decision-form-row">
+              <label htmlFor="final-decision-comments">
+                Comments to Requester
+              </label>
+              <textarea
+                id="final-decision-comments"
+                className="final-decision-comments"
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="Provide reason or clarification details"
+                disabled={decisionLoading}
+              />
+            </div>
+
+            <div className="modal-actions">
+              <Button
+                variant="secondary"
+                onClick={() => setIsDecisionModalOpen(false)}
+                disabled={decisionLoading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={submitDecision} disabled={decisionLoading}>
+                {decisionLoading ? "Submitting..." : "Submit Decision"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
