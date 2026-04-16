@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Eye } from "lucide-react";
 import api from "../api/client";
 import Card from "../components/Card";
 import Alert from "../components/Alert";
@@ -92,6 +94,7 @@ export default function ApprovalDashboard({ user }) {
                 <th>Department</th>
                 <th>Amount</th>
                 <th>Funding</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -102,6 +105,14 @@ export default function ApprovalDashboard({ user }) {
                   <td>{req.department}</td>
                   <td>${req.estimated_cost}</td>
                   <td>{req.funding_source}</td>
+                  <td>
+                    <Link
+                      to={`/request/${req.purchase_request_id || req.id}`}
+                      className="btn btn-sm btn-secondary"
+                    >
+                      <Eye size={16} />
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

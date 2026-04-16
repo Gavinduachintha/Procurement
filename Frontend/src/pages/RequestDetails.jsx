@@ -110,6 +110,29 @@ export default function RequestDetails({ user }) {
     return colors[status] || "#7f8c8d";
   };
 
+  const formatCurrency = (value) => {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "-";
+  };
+
+  const items =
+    Array.isArray(request.items) && request.items.length > 0
+      ? request.items
+      : [
+          {
+            line_no: 1,
+            item_type: request.item_type,
+            item_name: request.item_name,
+            item_description: request.item_description,
+            technical_specifications: request.technical_specifications,
+            quantity: request.quantity,
+            estimated_cost: request.estimated_cost,
+            funding_source: request.funding_source,
+            department: request.department,
+            required_date: request.required_date,
+          },
+        ];
+
   return (
     <div className="request-details">
       <div className="page-header">
@@ -161,34 +184,51 @@ export default function RequestDetails({ user }) {
           </div>
         </Card>
 
-        <Card>
-          <div className="detail-section">
-            <h2>Item Information</h2>
-            <div className="detail-row">
-              <div className="detail-label">Item Name</div>
-              <div className="detail-value">{request.item_name}</div>
-            </div>
-            <div className="detail-row">
-              <div className="detail-label">Quantity</div>
-              <div className="detail-value">{request.quantity}</div>
-            </div>
-            <div className="detail-row">
-              <div className="detail-label">Estimated Cost</div>
-              <div className="detail-value">${request.estimated_cost}</div>
-            </div>
-            <div className="detail-row">
-              <div className="detail-label">Funding Source</div>
-              <div className="detail-value">{request.funding_source}</div>
-            </div>
-            <div className="detail-row">
-              <div className="detail-label">Required Date</div>
-              <div className="detail-value">
-                {new Date(request.required_date).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-        </Card>
       </div>
+
+      <Card>
+        <div className="detail-section">
+          <h2>Requested Items</h2>
+          <div className="requested-items-table-wrap">
+            <table className="requested-items-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Type</th>
+                  <th>Item Name</th>
+                  <th>Description</th>
+                  <th>Technical Specifications</th>
+                  <th>Funding Source</th>
+                  <th>Department</th>
+                  <th>Required Date</th>
+                  <th>Qty</th>
+                  <th>Estimated Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, index) => (
+                  <tr key={`request-item-${item.line_no || index + 1}`}>
+                    <td>{item.line_no || index + 1}</td>
+                    <td>{item.item_type || "-"}</td>
+                    <td>{item.item_name || "-"}</td>
+                    <td>{item.item_description || "-"}</td>
+                    <td>{item.technical_specifications || "-"}</td>
+                    <td>{item.funding_source || "-"}</td>
+                    <td>{item.department || "-"}</td>
+                    <td>
+                      {item.required_date
+                        ? new Date(item.required_date).toLocaleDateString()
+                        : "-"}
+                    </td>
+                    <td>{item.quantity ?? "-"}</td>
+                    <td>{formatCurrency(item.estimated_cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <div className="detail-section">

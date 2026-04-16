@@ -18,9 +18,41 @@
 
 .details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
+}
+
+.requested-items-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #ecf0f1;
+  border-radius: 8px;
+}
+
+.requested-items-table {
+  width: 100%;
+  min-width: 1100px;
+  border-collapse: collapse;
+}
+
+.requested-items-table th,
+.requested-items-table td {
+  padding: 0.65rem 0.6rem;
+  border-bottom: 1px solid #ecf0f1;
+  text-align: left;
+  color: #34495e;
+  font-size: 0.9rem;
+  vertical-align: top;
+}
+
+.requested-items-table thead th {
+  background: #f8f9fa;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.requested-items-table tbody tr:nth-child(even) {
+  background: #fcfcfc;
 }
 
 .detail-section {

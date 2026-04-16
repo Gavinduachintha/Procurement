@@ -15,9 +15,10 @@ export default function SpecificationReview({ user }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [requestDetailsLoading, setRequestDetailsLoading] = useState(false);
 
   useEffect(() => {
-    console.log(
+  const [detailsLoading, setDetailsLoading] = useState(false);
       "🔍 SpecificationReview component mounted. User role:",
       user?.role,
     );
@@ -65,11 +66,55 @@ export default function SpecificationReview({ user }) {
     }
   };
 
-  const handleReviewClick = (request) => {
+  const handleReviewClick = async (request) => {
     console.log("👁️ Opening review modal for request:", request.id);
-    setSelectedRequest(request);
+    setRequestDetailsLoading(true);
+
+    try {
+      const response = await api.get(`/requests/${request.id}`);
+      const details = response.data?.data || response.data;
+    setDetailsLoading(true);
+    } catch (err) {
+      const errorMsg =
+        err.response?.data?.message || "Failed to load request details";
+      setError(errorMsg);
+      setSelectedRequest(request);
+    } finally {
+      setRequestDetailsLoading(false);
+    }
+
     setReviewNotes("");
     setIsModalOpen(true);
+      setDetailsLoading(false);
+
+  const formatCurrency = (value) => {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? `$${amount.toFixed(2)}` : "-";
+  };
+
+  const getReviewItems = () => {
+    if (!selectedRequest) {
+      return [];
+    }
+
+    if (Array.isArray(selectedRequest.items) && selectedRequest.items.length > 0) {
+      return selectedRequest.items;
+    }
+
+    return [
+      {
+        line_no: 1,
+        item_type: selectedRequest.item_type,
+        item_name: selectedRequest.item_name,
+        item_description: selectedRequest.item_description,
+        technical_specifications: selectedRequest.technical_specifications,
+        quantity: selectedRequest.quantity,
+        estimated_cost: selectedRequest.estimated_cost,
+        funding_source: selectedRequest.funding_source,
+        department: selectedRequest.department,
+        required_date: selectedRequest.required_date,
+      },
+    ];
   };
 
   const handleSubmitReview = async () => {
@@ -165,7 +210,10 @@ export default function SpecificationReview({ user }) {
         onClose={() => setIsModalOpen(false)}
         title="Review Specifications"
       >
-        {selectedRequest && (
+        {requestDetailsLoading ? (
+          <div className="loading-state">Loading request details...</div>
+        ) : (
+          selectedRequest && (
           <div className="review-modal">
             <div className="spec-info">
               <div>
@@ -173,33 +221,51 @@ export default function SpecificationReview({ user }) {
                 {selectedRequest.request_id || "N/A"}
               </div>
               <div>
-                <strong>Item:</strong> {selectedRequest.item_name || "N/A"}
-              </div>
-              <div>
-                <strong>Description:</strong>
-                <p>
-                  {selectedRequest.item_description ||
-                    "No description provided"}
-                </p>
-              </div>
-              <div>
-                <strong>Specifications:</strong>
-                <p>
-                  {selectedRequest.technical_specifications ||
-                    "No specifications provided"}
-                </p>
-              </div>
-              <div>
-                <strong>Quantity:</strong> {selectedRequest.quantity || "N/A"}
-              </div>
-              <div>
-                <strong>Estimated Cost:</strong> $
-                {selectedRequest.estimated_cost || "0.00"}
+                <strong>Total Items:</strong> {getReviewItems().length}
               </div>
               <div>
                 <strong>Submitted By:</strong>{" "}
                 {selectedRequest.requested_by_name || "Unknown"}
               </div>
+            </div>
+
+            <div className="review-items-table-wrap">
+              <table className="review-items-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th>Technical Specifications</th>
+                    <th>Funding Source</th>
+                    <th>Department</th>
+                    <th>Required Date</th>
+                    <th>Qty</th>
+                    <th>Estimated Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getReviewItems().map((item, index) => (
+                    <tr key={`review-item-${item.line_no || index + 1}`}>
+                      <td>{item.line_no || index + 1}</td>
+                      <td>{item.item_type || "-"}</td>
+                      <td>{item.item_name || "-"}</td>
+                      <td>{item.item_description || "-"}</td>
+                      <td>{item.technical_specifications || "-"}</td>
+                      <td>{item.funding_source || "-"}</td>
+                      <td>{item.department || "-"}</td>
+                      <td>
+                        {item.required_date
+                          ? new Date(item.required_date).toLocaleDateString()
+                          : "-"}
+                      </td>
+                      <td>{item.quantity ?? "-"}</td>
+                      <td>{formatCurrency(item.estimated_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             <TextArea
@@ -222,6 +288,7 @@ export default function SpecificationReview({ user }) {
               </Button>
             </div>
           </div>
+          )
         )}
       </Modal>
     </div>
