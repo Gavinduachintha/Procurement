@@ -48,8 +48,11 @@ export const requestRepository = {
                item_description,
                technical_specifications,
                quantity,
-               estimated_cost
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+               estimated_cost,
+               funding_source,
+               department,
+               required_date
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               request.id,
               index + 1,
@@ -59,6 +62,9 @@ export const requestRepository = {
               item.technicalSpecifications,
               item.quantity,
               item.estimatedCost,
+              item.fundingSource,
+              item.department,
+              item.requiredDate,
             ],
           );
         }
@@ -127,7 +133,10 @@ export const requestRepository = {
          item_description,
          technical_specifications,
          quantity,
-         estimated_cost
+        estimated_cost,
+        funding_source,
+        department,
+        required_date
        FROM purchase_request_items
        WHERE purchase_request_id = $1
        ORDER BY line_no ASC`,

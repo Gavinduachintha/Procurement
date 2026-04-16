@@ -165,12 +165,53 @@ export const initializeSchema = async () => {
       technical_specifications TEXT NOT NULL,
       quantity INTEGER NOT NULL CHECK (quantity > 0),
       estimated_cost NUMERIC(14,2) NOT NULL CHECK (estimated_cost >= 0),
+      funding_source TEXT NOT NULL CHECK (funding_source IN ('MPP', 'SELF_FUND', 'SPECIAL_FUND')),
+      department TEXT NOT NULL,
+      required_date DATE NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (purchase_request_id, line_no)
     );
 
     ALTER TABLE purchase_request_items
     ADD COLUMN IF NOT EXISTS item_type TEXT;
+
+    ALTER TABLE purchase_request_items
+    ADD COLUMN IF NOT EXISTS funding_source TEXT;
+
+    ALTER TABLE purchase_request_items
+    ADD COLUMN IF NOT EXISTS department TEXT;
+
+    ALTER TABLE purchase_request_items
+    ADD COLUMN IF NOT EXISTS required_date DATE;
+
+    UPDATE purchase_request_items pri
+    SET
+      funding_source = pr.funding_source,
+      department = pr.department,
+      required_date = pr.required_date
+    FROM purchase_requests pr
+    WHERE pri.purchase_request_id = pr.id
+      AND (
+        pri.funding_source IS NULL
+        OR pri.department IS NULL
+        OR pri.required_date IS NULL
+      );
+
+    ALTER TABLE purchase_request_items
+    ALTER COLUMN funding_source SET NOT NULL;
+
+    ALTER TABLE purchase_request_items
+    ALTER COLUMN department SET NOT NULL;
+
+    ALTER TABLE purchase_request_items
+    ALTER COLUMN required_date SET NOT NULL;
+
+    ALTER TABLE purchase_request_items
+    DROP CONSTRAINT IF EXISTS purchase_request_items_funding_source_check;
+
+    ALTER TABLE purchase_request_items
+    ADD CONSTRAINT purchase_request_items_funding_source_check
+    CHECK (funding_source IN ('MPP', 'SELF_FUND', 'SPECIAL_FUND'));
 
     CREATE TABLE IF NOT EXISTS specification_reviews (
       id BIGSERIAL PRIMARY KEY,

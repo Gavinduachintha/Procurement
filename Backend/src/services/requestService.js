@@ -5,6 +5,7 @@ import { ApiError } from "../utils/apiError.js";
 import { buildRequestNumber } from "../utils/jobNumber.js";
 import {
   APPROVER_ROLES,
+  FUNDING_SOURCES,
   REQUEST_STATUS,
   USER_ROLES,
 } from "../utils/constants.js";
@@ -56,6 +57,17 @@ export const requestService = {
       ).trim();
       const quantity = Number(item.quantity);
       const estimatedCost = Number(item.estimated_cost || item.estimatedCost);
+      const fundingSource = String(
+        item.funding_source || item.fundingSource || payload.funding_source || payload.fundingSource || "",
+      )
+        .trim()
+        .toUpperCase();
+      const department = String(
+        item.department || payload.department || user.department || "",
+      ).trim();
+      const requiredDate = String(
+        item.required_date || item.requiredDate || payload.required_date || payload.requiredDate || "",
+      ).trim();
 
       if (!["IT", "NON_IT"].includes(itemType)) {
         throw new ApiError(
@@ -89,6 +101,33 @@ export const requestService = {
         );
       }
 
+      if (!FUNDING_SOURCES.includes(fundingSource)) {
+        throw new ApiError(
+          400,
+          `Valid funding source is required for item #${index + 1}`,
+        );
+      }
+
+      if (!department) {
+        throw new ApiError(400, `Department is required for item #${index + 1}`);
+      }
+
+      if (!requiredDate || Number.isNaN(Date.parse(requiredDate))) {
+        throw new ApiError(400, `Valid required date is required for item #${index + 1}`);
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const parsedRequiredDate = new Date(requiredDate);
+      parsedRequiredDate.setHours(0, 0, 0, 0);
+
+      if (parsedRequiredDate < today) {
+        throw new ApiError(
+          400,
+          `Required date cannot be in the past for item #${index + 1}`,
+        );
+      }
+
       return {
         itemType,
         itemName,
@@ -96,14 +135,31 @@ export const requestService = {
         technicalSpecifications,
         quantity,
         estimatedCost,
+        fundingSource,
+        department,
+        requiredDate,
       };
     });
 
-    const groupedByType = normalizedItems.reduce((acc, item) => {
-      if (!acc[item.itemType]) {
-        acc[item.itemType] = [];
+    const groupedByRequestAttributes = normalizedItems.reduce((acc, item) => {
+      const groupKey = [
+        item.itemType,
+        item.fundingSource,
+        item.department,
+        item.requiredDate,
+      ].join("|");
+
+      if (!acc[groupKey]) {
+        acc[groupKey] = {
+          itemType: item.itemType,
+          fundingSource: item.fundingSource,
+          department: item.department,
+          requiredDate: item.requiredDate,
+          items: [],
+        };
       }
-      acc[item.itemType].push(item);
+
+      acc[groupKey].items.push(item);
       return acc;
     }, {});
 
@@ -117,7 +173,10 @@ export const requestService = {
 
     const createdRequests = [];
 
-    for (const [itemType, itemsForType] of Object.entries(groupedByType)) {
+    for (const group of Object.values(groupedByRequestAttributes)) {
+      const { itemType, fundingSource, department, requiredDate, items: itemsForType } =
+        group;
+
       const checkerRole =
         itemType === "IT"
           ? USER_ROLES.DIRECTOR_ICT
@@ -169,10 +228,10 @@ export const requestService = {
         itemType,
         quantity: totalQuantity,
         estimatedCost: totalEstimatedCost,
-        fundingSource: payload.funding_source || payload.fundingSource,
+        fundingSource,
         justification: payload.justification,
-        department: payload.department || user.department || "General",
-        requiredDate: payload.required_date || payload.requiredDate,
+        department,
+        requiredDate,
         attachments: payload.attachments || [],
         items: itemsForType,
         status: "SUBMITTED",

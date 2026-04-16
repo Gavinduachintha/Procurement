@@ -17,6 +17,9 @@ const createEmptyItem = () => ({
   technical_specifications: "",
   quantity: "",
   estimated_cost: "",
+  funding_source: "",
+  department: "",
+  required_date: "",
 });
 
 export default function RequestSubmission({ user }) {
@@ -35,10 +38,7 @@ export default function RequestSubmission({ user }) {
   const [submissionPreview, setSubmissionPreview] = useState(null);
   const [formData, setFormData] = useState({
     items: [createEmptyItem()],
-    funding_source: "",
     justification: "",
-    department: "",
-    required_date: "",
   });
 
   const itemTypeOptions = [
@@ -118,6 +118,11 @@ export default function RequestSubmission({ user }) {
     return options.find((option) => option.value === value)?.label || value;
   };
 
+  const formatCurrency = (value) => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? `$${numericValue.toFixed(2)}` : "-";
+  };
+
   const validateAndBuildSubmission = () => {
     if (!Array.isArray(formData.items) || formData.items.length === 0) {
       setError("At least one item is required");
@@ -131,6 +136,9 @@ export default function RequestSubmission({ user }) {
       technical_specifications: item.technical_specifications?.trim() || "",
       quantity: Number(item.quantity),
       estimated_cost: Number(item.estimated_cost),
+      funding_source: item.funding_source,
+      department: item.department,
+      required_date: item.required_date,
     }));
 
     const invalidItemIndex = normalizedItems.findIndex(
@@ -141,7 +149,10 @@ export default function RequestSubmission({ user }) {
         !Number.isFinite(item.quantity) ||
         item.quantity <= 0 ||
         !Number.isFinite(item.estimated_cost) ||
-        item.estimated_cost < 0,
+        item.estimated_cost < 0 ||
+        !item.funding_source ||
+        !item.department ||
+        !item.required_date,
     );
 
     if (invalidItemIndex !== -1) {
@@ -151,33 +162,43 @@ export default function RequestSubmission({ user }) {
       return null;
     }
 
-    if (formData.required_date < minRequiredDate) {
-      setError("Required date cannot be before today");
-      return null;
-    }
+    const invalidDateIndex = normalizedItems.findIndex(
+      (item) => item.required_date < minRequiredDate,
+    );
 
-    if (
-      !formData.funding_source ||
-      !formData.department ||
-      !formData.required_date
-    ) {
-      setError("Please complete all required request details");
+    if (invalidDateIndex !== -1) {
+      setError(`Required date cannot be before today for item #${invalidDateIndex + 1}`);
       return null;
     }
 
     const payload = {
       items: normalizedItems,
-      funding_source: formData.funding_source,
       justification: formData.justification,
-      department: formData.department,
-      required_date: formData.required_date,
     };
+
+    const uniqueFundingSources = [
+      ...new Set(
+        normalizedItems.map((item) =>
+          getOptionLabel(fundingOptions, item.funding_source),
+        ),
+      ),
+    ];
+    const uniqueDepartments = [
+      ...new Set(
+        normalizedItems.map((item) =>
+          getOptionLabel(departmentOptions, item.department),
+        ),
+      ),
+    ];
+    const uniqueRequiredDates = [
+      ...new Set(normalizedItems.map((item) => item.required_date)),
+    ];
 
     const preview = {
       itemCount: normalizedItems.length,
-      fundingSource: getOptionLabel(fundingOptions, formData.funding_source),
-      department: getOptionLabel(departmentOptions, formData.department),
-      requiredDate: formData.required_date,
+      fundingSources: uniqueFundingSources,
+      departments: uniqueDepartments,
+      requiredDates: uniqueRequiredDates,
       justification: formData.justification?.trim() || "-",
       totalQuantity: normalizedItems.reduce(
         (sum, item) => sum + item.quantity,
@@ -374,6 +395,43 @@ export default function RequestSubmission({ user }) {
                       required
                     />
                   </div>
+
+                  <div className="form-row">
+                    <Select
+                      label="Funding Source *"
+                      options={fundingOptions}
+                      value={item.funding_source}
+                      onChange={(e) =>
+                        handleItemChange(index, "funding_source", e.target.value)
+                      }
+                      required
+                    />
+                    <Select
+                      label="Department *"
+                      options={departmentOptions}
+                      value={item.department}
+                      onChange={(e) =>
+                        handleItemChange(index, "department", e.target.value)
+                      }
+                      required
+                    />
+                  </div>
+
+                  <Input
+                    label="Required Date *"
+                    type="date"
+                    value={item.required_date}
+                    onChange={(e) =>
+                      handleItemChange(index, "required_date", e.target.value)
+                    }
+                    onFocus={openDatePicker}
+                    onClick={openDatePicker}
+                    onKeyDown={blockManualDateInput}
+                    onPaste={(e) => e.preventDefault()}
+                    onDrop={(e) => e.preventDefault()}
+                    min={minRequiredDate}
+                    required
+                  />
                 </Card>
               ))}
             </div>
@@ -386,43 +444,6 @@ export default function RequestSubmission({ user }) {
           </div>
 
           <div className="form-section">
-            <h2>Request Details</h2>
-            <div className="form-row">
-              <Select
-                label="Funding Source *"
-                name="funding_source"
-                options={fundingOptions}
-                value={formData.funding_source}
-                onChange={handleChange}
-                required
-              />
-              <Select
-                label="Department *"
-                name="department"
-                options={departmentOptions}
-                value={formData.department}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <Input
-              label="Required Date *"
-              name="required_date"
-              type="date"
-              value={formData.required_date}
-              onChange={handleChange}
-              onFocus={openDatePicker}
-              onClick={openDatePicker}
-              onKeyDown={blockManualDateInput}
-              onPaste={(e) => e.preventDefault()}
-              onDrop={(e) => e.preventDefault()}
-              min={minRequiredDate}
-              required
-            />
-          </div>
-
-          <div className="form-section">
             <h2>Justification</h2>
             <TextArea
               label="Justification *"
@@ -432,6 +453,119 @@ export default function RequestSubmission({ user }) {
               required
               placeholder="Explain why this purchase is necessary"
             />
+          </div>
+
+          <div className="form-section request-summary-section">
+            <h2>Request Summary Preview</h2>
+
+            <div className="summary-table-wrap">
+              <table className="summary-table details-table">
+                <tbody>
+                  <tr>
+                    <th>Funding Sources</th>
+                    <td>
+                      {formData.items.some((item) => item.funding_source)
+                        ? [
+                            ...new Set(
+                              formData.items
+                                .filter((item) => item.funding_source)
+                                .map((item) =>
+                                  getOptionLabel(
+                                    fundingOptions,
+                                    item.funding_source,
+                                  ),
+                                ),
+                            ),
+                          ].join(", ")
+                        : "-"}
+                    </td>
+                    <th>Departments</th>
+                    <td>
+                      {formData.items.some((item) => item.department)
+                        ? [
+                            ...new Set(
+                              formData.items
+                                .filter((item) => item.department)
+                                .map((item) =>
+                                  getOptionLabel(departmentOptions, item.department),
+                                ),
+                            ),
+                          ].join(", ")
+                        : "-"}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Required Dates</th>
+                    <td>
+                      {formData.items.some((item) => item.required_date)
+                        ? [
+                            ...new Set(
+                              formData.items
+                                .filter((item) => item.required_date)
+                                .map((item) => item.required_date),
+                            ),
+                          ].join(", ")
+                        : "-"}
+                    </td>
+                    <th>Total Quantity</th>
+                    <td>{totals.quantity}</td>
+                  </tr>
+                  <tr>
+                    <th>Total Estimated Cost</th>
+                    <td>{formatCurrency(totals.estimatedCost)}</td>
+                    <th>Total Items</th>
+                    <td>{formData.items.length}</td>
+                  </tr>
+                  <tr>
+                    <th>Justification</th>
+                    <td colSpan="3">{formData.justification?.trim() || "-"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="summary-table-wrap">
+              <table className="summary-table items-table-preview">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th>Technical Specifications</th>
+                    <th>Funding Source</th>
+                    <th>Department</th>
+                    <th>Required Date</th>
+                    <th>Qty</th>
+                    <th>Estimated Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.items.map((item, index) => (
+                    <tr key={`summary-row-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{getOptionLabel(itemTypeOptions, item.item_type)}</td>
+                      <td>{item.item_name?.trim() || "-"}</td>
+                      <td>{item.item_description?.trim() || "-"}</td>
+                      <td>{item.technical_specifications?.trim() || "-"}</td>
+                      <td>
+                        {item.funding_source
+                          ? getOptionLabel(fundingOptions, item.funding_source)
+                          : "-"}
+                      </td>
+                      <td>
+                        {item.department
+                          ? getOptionLabel(departmentOptions, item.department)
+                          : "-"}
+                      </td>
+                      <td>{item.required_date || "-"}</td>
+                      <td>{Number(item.quantity) > 0 ? item.quantity : "-"}</td>
+                      <td>{formatCurrency(item.estimated_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="form-actions">
@@ -480,15 +614,16 @@ export default function RequestSubmission({ user }) {
                   {submissionPreview.totalEstimatedCost.toFixed(2)}
                 </div>
                 <div>
-                  <strong>Funding Source:</strong>{" "}
-                  {submissionPreview.fundingSource}
+                  <strong>Funding Sources:</strong>{" "}
+                  {submissionPreview.fundingSources.join(", ")}
                 </div>
                 <div>
-                  <strong>Department:</strong> {submissionPreview.department}
+                  <strong>Departments:</strong>{" "}
+                  {submissionPreview.departments.join(", ")}
                 </div>
                 <div>
-                  <strong>Required Date:</strong>{" "}
-                  {submissionPreview.requiredDate}
+                  <strong>Required Dates:</strong>{" "}
+                  {submissionPreview.requiredDates.join(", ")}
                 </div>
               </div>
 
@@ -508,6 +643,13 @@ export default function RequestSubmission({ user }) {
                       {getOptionLabel(itemTypeOptions, item.item_type)})
                     </strong>
                     <div>Name: {item.item_name}</div>
+                    <div>
+                      Funding Source: {getOptionLabel(fundingOptions, item.funding_source)}
+                    </div>
+                    <div>
+                      Department: {getOptionLabel(departmentOptions, item.department)}
+                    </div>
+                    <div>Required Date: {item.required_date}</div>
                     <div>Quantity: {item.quantity}</div>
                     <div>Cost: ${item.estimated_cost.toFixed(2)}</div>
                   </div>

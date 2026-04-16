@@ -83,24 +83,6 @@ export default function Login({ setUser }) {
             {loading ? "Logging in..." : "Login"}
           </Button>
         </form>
-
-        <div className="auth-footer">
-          <p>Demo Credentials:</p>
-          <ul>
-            <li>
-              <strong>Officer:</strong> officer@uni.edu / password
-            </li>
-            <li>
-              <strong>Checker:</strong> checker@uni.edu / password
-            </li>
-            <li>
-              <strong>Approver:</strong> approver@uni.edu / password
-            </li>
-            <li>
-              <strong>Supply:</strong> supply@uni.edu / password
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );

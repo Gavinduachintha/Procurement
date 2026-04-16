@@ -1,5 +1,6 @@
 .request-submission {
-  max-width: 800px;
+  max-width: none;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -71,6 +72,58 @@
   margin: 0;
   color: #2c3e50;
   font-size: 1rem;
+}
+
+.request-summary-section {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.summary-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #dfe6e9;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.summary-table-wrap:last-child {
+  margin-bottom: 0;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid #ecf0f1;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.9rem;
+  vertical-align: top;
+  color: #2c3e50;
+  text-align: left;
+}
+
+.details-table th {
+  width: 20%;
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.details-table td {
+  width: 30%;
+}
+
+.items-table-preview thead th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+.items-table-preview tbody tr:nth-child(even) {
+  background: #fcfcfc;
 }
 
 .submission-preview {
@@ -211,6 +264,10 @@
 
   .preview-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-table {
+    min-width: 640px;
   }
 
   .form-actions {

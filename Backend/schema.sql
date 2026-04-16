@@ -43,12 +43,24 @@ CREATE TABLE IF NOT EXISTS purchase_request_items (
   technical_specifications TEXT NOT NULL,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   estimated_cost NUMERIC(14,2) NOT NULL CHECK (estimated_cost >= 0),
+  funding_source TEXT NOT NULL CHECK (funding_source IN ('MPP', 'SELF_FUND', 'SPECIAL_FUND')),
+  department TEXT NOT NULL,
+  required_date DATE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (purchase_request_id, line_no)
 );
 
 ALTER TABLE purchase_request_items
 ADD COLUMN IF NOT EXISTS item_type TEXT;
+
+ALTER TABLE purchase_request_items
+ADD COLUMN IF NOT EXISTS funding_source TEXT;
+
+ALTER TABLE purchase_request_items
+ADD COLUMN IF NOT EXISTS department TEXT;
+
+ALTER TABLE purchase_request_items
+ADD COLUMN IF NOT EXISTS required_date DATE;
 
 CREATE TABLE IF NOT EXISTS specification_reviews (
   id BIGSERIAL PRIMARY KEY,
