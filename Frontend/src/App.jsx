@@ -15,6 +15,7 @@ import SupplyBranchDashboard from "./pages/SupplyBranchDashboard";
 import RequestDetails from "./pages/RequestDetails";
 import DeliveryConfirmation from "./pages/DeliveryConfirmation";
 import AdminUserRegistration from "./pages/AdminUserRegistration";
+import ChangePassword from "./pages/ChangePassword";
 import "./App.css";
 
 function App() {
@@ -49,8 +50,7 @@ function App() {
     return <div className="loading">Loading...</div>;
   }
 
-  const hasUserAdminAccess =
-    user && ["REGISTRAR", "VICE_CHANCELLOR"].includes(user.role);
+  const hasUserAdminAccess = user && ["ADMIN"].includes(user.role);
 
   return (
     <Router>
@@ -95,7 +95,12 @@ function App() {
                 )
               }
             />
+            <Route
+              path="/change-password"
+              element={<ChangePassword user={user} />}
+            />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         ) : (
           <Route path="*" element={<Navigate to="/login" replace />} />

@@ -2,7 +2,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 0.25rem;
 }
 
 .dashboard-header h1 {
@@ -11,8 +11,14 @@
 }
 
 .dashboard-header p {
-  margin: 0.5rem 0 0 0;
+  margin: 2.5rem;
   color: #7f8c8d;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .dashboard {
@@ -38,5 +44,15 @@
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-actions .btn {
+    width: 100%;
   }
 }

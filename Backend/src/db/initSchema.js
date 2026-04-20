@@ -3,6 +3,13 @@ import bcrypt from "bcrypt";
 
 const MANUAL_TEST_USERS = [
   {
+    fullName: "System Admin",
+    email: "admin@univ.edu",
+    password: "Admin@12345",
+    role: "ADMIN",
+    department: "Administration",
+  },
+  {
     fullName: "Rohan Requester",
     email: "rohan.requester@univ.edu",
     password: "Req@12345",

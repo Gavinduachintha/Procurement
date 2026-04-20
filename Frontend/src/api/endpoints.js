@@ -4,6 +4,7 @@ export const authApi = {
   register: (data) => api.post("/auth/register", data),
   login: (email, password) => api.post("/auth/login", { email, password }),
   listUsersByRole: (role) => api.get("/auth/users", { params: { role } }),
+  changePassword: (data) => api.post("/auth/change-password", data),
   logout: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");

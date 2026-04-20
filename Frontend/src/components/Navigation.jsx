@@ -8,6 +8,7 @@ import {
   ClipboardList,
   Briefcase,
   Users,
+  KeyRound,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -70,7 +71,7 @@ export default function Navigation({ user, onLogout }) {
       });
     }
 
-    if (["REGISTRAR", "VICE_CHANCELLOR"].includes(user?.role)) {
+    if (["ADMIN"].includes(user?.role)) {
       links.push({
         to: "/admin/users",
         label: "User Admin",
@@ -78,6 +79,13 @@ export default function Navigation({ user, onLogout }) {
         show: true,
       });
     }
+
+    links.push({
+      to: "/change-password",
+      label: "Change Password",
+      icon: KeyRound,
+      show: true,
+    });
 
     console.log("✅ Navigation.jsx: Built", links.length, "navigation links");
     return links;

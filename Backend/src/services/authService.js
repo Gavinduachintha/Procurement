@@ -62,4 +62,47 @@ export const authService = {
       token: signToken(safeUser),
     };
   },
+
+  async changePassword(userId, payload) {
+    const currentPassword = String(payload?.currentPassword || "");
+    const newPassword = String(payload?.newPassword || "");
+    const confirmPassword = String(payload?.confirmPassword || "");
+
+    if (!currentPassword) {
+      throw new ApiError(400, "Current password is required");
+    }
+
+    if (newPassword.length < 6) {
+      throw new ApiError(400, "New password must be at least 6 characters");
+    }
+
+    if (newPassword !== confirmPassword) {
+      throw new ApiError(400, "New password and confirm password do not match");
+    }
+
+    if (newPassword === currentPassword) {
+      throw new ApiError(
+        400,
+        "New password must be different from current password",
+      );
+    }
+
+    const authUser = await userRepository.findAuthById(userId);
+    if (!authUser) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      authUser.password_hash,
+    );
+    if (!isMatch) {
+      throw new ApiError(401, "Current password is incorrect");
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await userRepository.updatePasswordHash(userId, newPasswordHash);
+
+    return { message: "Password changed successfully" };
+  },
 };

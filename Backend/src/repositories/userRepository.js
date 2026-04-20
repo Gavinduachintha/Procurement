@@ -26,6 +26,26 @@ export const userRepository = {
     return rows[0] || null;
   },
 
+  async findAuthById(id) {
+    const { rows } = await query(
+      "SELECT id, email, password_hash FROM users WHERE id = $1",
+      [id],
+    );
+    return rows[0] || null;
+  },
+
+  async updatePasswordHash(id, passwordHash) {
+    const { rows } = await query(
+      `UPDATE users
+       SET password_hash = $2
+       WHERE id = $1
+       RETURNING id, full_name, email, role, department, created_at`,
+      [id, passwordHash],
+    );
+
+    return rows[0] || null;
+  },
+
   async findByRole(role) {
     const { rows } = await query(
       "SELECT id, full_name, email, role, department FROM users WHERE role = $1 ORDER BY id ASC",

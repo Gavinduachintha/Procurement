@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, Users } from "lucide-react";
 import api from "../api/client";
 import Card from "../components/Card";
-import Button from "../components/Button";
 import Alert from "../components/Alert";
 import "./Dashboard.css";
 
@@ -146,12 +145,20 @@ export default function Dashboard({ user }) {
           <h1>Dashboard</h1>
           <p>Welcome, {user?.name}</p>
         </div>
-        {user?.role === "REQUESTING_OFFICER" && (
-          <Link to="/request/new" className="btn btn-primary">
-            <Plus size={18} />
-            New Request
-          </Link>
-        )}
+        <div className="dashboard-actions">
+          {user?.role === "REQUESTING_OFFICER" && (
+            <Link to="/request/new" className="btn btn-primary">
+              <Plus size={18} />
+              New Request
+            </Link>
+          )}
+          {user?.role === "ADMIN" && (
+            <Link to="/admin/users" className="btn btn-primary">
+              <Users size={18} />
+              Open User Admin
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
@@ -164,6 +171,11 @@ export default function Dashboard({ user }) {
           {user?.role === "REQUESTING_OFFICER" && (
             <Link to="/request/new" className="btn btn-primary mt-2">
               Create Your First Request
+            </Link>
+          )}
+          {user?.role === "ADMIN" && (
+            <Link to="/admin/users" className="btn btn-primary mt-2">
+              Open User Administration
             </Link>
           )}
         </Card>

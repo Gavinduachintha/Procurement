@@ -7,11 +7,17 @@ const router = Router();
 router.post(
   "/register",
   authenticate,
-  authorize("REGISTRAR", "VICE_CHANCELLOR"),
+  authorize("ADMIN"),
   authController.register,
 );
 router.post("/login", authController.login);
 router.get("/me", authenticate, authController.me);
-router.get("/users", authenticate, authController.usersByRole);
+router.get(
+  "/users",
+  authenticate,
+  authorize("ADMIN"),
+  authController.usersByRole,
+);
+router.post("/change-password", authenticate, authController.changePassword);
 
 export default router;

@@ -5,9 +5,11 @@ import Input from "../components/Input";
 import Select from "../components/Select";
 import Button from "../components/Button";
 import Alert from "../components/Alert";
+import Modal from "../components/Modal";
 import "./AdminUserRegistration.css";
 
 const roleOptions = [
+  { value: "ADMIN", label: "Admin" },
   { value: "REQUESTING_OFFICER", label: "Requesting Officer" },
   { value: "DIRECTOR_ICT", label: "Director ICT" },
   { value: "MAINTENANCE_ENGINEER", label: "Maintenance Engineer" },
@@ -55,6 +57,8 @@ export default function AdminUserRegistration() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [createdUserDetails, setCreatedUserDetails] = useState(null);
+  const [copySuccess, setCopySuccess] = useState("");
 
   const loadUsersByRole = async (role) => {
     setLoadingUsers(true);
@@ -121,15 +125,29 @@ export default function AdminUserRegistration() {
     setSubmitting(true);
 
     try {
-      await authApi.register({
+      const payload = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
         password: formData.password,
         role: formData.role,
         department: formData.department,
-      });
+      };
+
+      const response = await authApi.register(payload);
+      const createdUser = response.data?.user || response.data;
 
       setSuccess("User account created successfully.");
+      setCreatedUserDetails({
+        id: createdUser?.id,
+        fullName: createdUser?.full_name || payload.fullName,
+        email: createdUser?.email || payload.email,
+        role: createdUser?.role || payload.role,
+        department: createdUser?.department || payload.department,
+        password: payload.password,
+        createdAt: createdUser?.created_at || null,
+      });
+      setCopySuccess("");
+
       setFormData((prev) => ({
         ...createInitialForm(),
         role: prev.role,
@@ -143,6 +161,28 @@ export default function AdminUserRegistration() {
       setError(errorMessage);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const copyCreatedUserDetails = async () => {
+    if (!createdUserDetails) {
+      return;
+    }
+
+    const createdText = [
+      `Full Name: ${createdUserDetails.fullName}`,
+      `Email: ${createdUserDetails.email}`,
+      `Password: ${createdUserDetails.password}`,
+      `Role: ${createdUserDetails.role}`,
+      `Department: ${createdUserDetails.department}`,
+      `User ID: ${createdUserDetails.id || "-"}`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(createdText);
+      setCopySuccess("User details copied to clipboard.");
+    } catch {
+      setCopySuccess("Unable to copy automatically. Please copy manually.");
     }
   };
 
@@ -272,6 +312,54 @@ export default function AdminUserRegistration() {
           )}
         </Card>
       </div>
+
+      <Modal
+        isOpen={Boolean(createdUserDetails)}
+        onClose={() => {
+          setCreatedUserDetails(null);
+          setCopySuccess("");
+        }}
+        title="User Created"
+      >
+        {createdUserDetails && (
+          <div className="created-user-modal">
+            <p className="created-user-note">
+              Save these credentials now. The password will not be shown again.
+            </p>
+
+            <div className="created-user-grid">
+              <div>Full Name</div>
+              <strong>{createdUserDetails.fullName}</strong>
+              <div>Email</div>
+              <strong>{createdUserDetails.email}</strong>
+              <div>Password</div>
+              <strong>{createdUserDetails.password}</strong>
+              <div>Role</div>
+              <strong>{createdUserDetails.role}</strong>
+              <div>Department</div>
+              <strong>{createdUserDetails.department || "-"}</strong>
+              <div>User ID</div>
+              <strong>{createdUserDetails.id || "-"}</strong>
+            </div>
+
+            {copySuccess && <Alert type="success">{copySuccess}</Alert>}
+
+            <div className="created-user-actions">
+              <Button variant="secondary" onClick={copyCreatedUserDetails}>
+                Copy Details
+              </Button>
+              <Button
+                onClick={() => {
+                  setCreatedUserDetails(null);
+                  setCopySuccess("");
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

@@ -3,109 +3,115 @@ Generated: 2026-03-19
 
 Use these for manual registration in the app.
 
-1) Full Name: Rohan Requester
+1) Full Name: System Admin
+   Email: admin@univ.edu
+   Password: Admin@12345
+   Role: ADMIN
+   Department: Administration
+
+2) Full Name: Rohan Requester
    Email: rohan.requester@univ.edu
    Password: Req@12345
    Role: REQUESTING_OFFICER
    Department: Computer Science
 
-2) Full Name: Diana ICT
+3) Full Name: Diana ICT
    Email: diana.ict@univ.edu
    Password: Ict@12345
    Role: DIRECTOR_ICT
    Department: ICT Center
 
-3) Full Name: Malik Maintenance
+4) Full Name: Malik Maintenance
    Email: malik.maintenance@univ.edu
    Password: Maint@12345
    Role: MAINTENANCE_ENGINEER
    Department: Maintenance
 
-4) Full Name: Asha Dean FAS
+5) Full Name: Asha Dean FAS
    Email: asha.dean.fas@univ.edu
    Password: DeanFas@123
    Role: DEAN
    Department: FAS
 
-5) Full Name: Nalin Dean FOT
+6) Full Name: Nalin Dean FOT
    Email: nalin.dean.fot@univ.edu
    Password: DeanFot@123
    Role: DEAN
    Department: FOT
 
-6) Full Name: Priya Dean FBSF
+7) Full Name: Priya Dean FBSF
    Email: priya.dean.fbsf@univ.edu
    Password: DeanFbsf@123
    Role: DEAN
    Department: FBSF
 
-7) Full Name: Suresh Dean FOM
+8) Full Name: Suresh Dean FOM
    Email: suresh.dean.fom@univ.edu
    Password: DeanFom@123
    Role: DEAN
    Department: FOM
 
-8) Full Name: Kasuni Dean FAPM
+9) Full Name: Kasuni Dean FAPM
    Email: kasuni.dean.fapm@univ.edu
    Password: DeanFapm@123
    Role: DEAN
    Department: FAPM
 
-9) Full Name: Heshan Dean FLFN
+10) Full Name: Heshan Dean FLFN
    Email: heshan.dean.flfn@univ.edu
    Password: DeanFlfn@123
    Role: DEAN
    Department: FLFN
 
-10) Full Name: Ravi Registrar
+11) Full Name: Ravi Registrar
    Email: ravi.registrar@univ.edu
    Password: Reg@12345
    Role: REGISTRAR
    Department: Administration
 
-11) Full Name: Bela Bursar
+12) Full Name: Bela Bursar
    Email: bela.bursar@univ.edu
    Password: Bur@12345
    Role: BURSAR
    Department: Finance
 
-12) Full Name: Victor Chancellor
+13) Full Name: Victor Chancellor
    Email: victor.vc@univ.edu
    Password: Vc@12345
    Role: VICE_CHANCELLOR
    Department: Administration
 
-13) Full Name: Sahan Supply
+14) Full Name: Sahan Supply
    Email: sahan.supply@univ.edu
    Password: Supply@12345
    Role: SUPPLY_BRANCH
    Department: Supply Branch
 
-14) Full Name: Clara Clerk
+15) Full Name: Clara Clerk
    Email: clara.clerk@univ.edu
    Password: Clerk@12345
    Role: SUBJECT_CLERK
    Department: Supply Branch
 
-15) Full Name: Thenu TEC
+16) Full Name: Thenu TEC
    Email: thenu.tec@univ.edu
    Password: Tec@12345
    Role: TEC_MEMBER
    Department: Technical Evaluation Committee
 
-16) Full Name: Nimal Minor Committee
+17) Full Name: Nimal Minor Committee
    Email: nimal.minor.committee@univ.edu
    Password: Minor@12345
    Role: MINOR_COMMITTEE
    Department: Procurement Committee
 
-17) Full Name: Maya Major Committee
+18) Full Name: Maya Major Committee
    Email: maya.major.committee@univ.edu
    Password: Major@12345
    Role: MAJOR_COMMITTEE
    Department: Procurement Committee
 
-18) Full Name: Fari Finance
+19) Full Name: Fari Finance
    Email: fari.finance@univ.edu
    Password: Finance@12345
    Role: FINANCE_OFFICER

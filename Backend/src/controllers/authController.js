@@ -29,4 +29,9 @@ export const authController = {
     const users = await userRepository.findByRole(role);
     res.json(users);
   }),
+
+  changePassword: asyncHandler(async (req, res) => {
+    const result = await authService.changePassword(req.user.id, req.body);
+    res.json(result);
+  }),
 };
