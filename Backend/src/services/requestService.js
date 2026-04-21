@@ -333,6 +333,280 @@ export const requestService = {
     };
   },
 
+  async modifyRequest(user, requestId, payload) {
+    if (user.role !== USER_ROLES.REQUESTING_OFFICER) {
+      throw new ApiError(403, "Only requesting officers can modify requests");
+    }
+
+    const request = await requestRepository.findById(requestId);
+    if (!request) {
+      throw new ApiError(404, "Request not found");
+    }
+
+    if (Number(request.requester_id) !== Number(user.id)) {
+      throw new ApiError(403, "You can only modify your own requests");
+    }
+
+    const modifiableStatuses = [
+      REQUEST_STATUS.SPEC_RETURNED_TO_REQUESTER,
+      REQUEST_STATUS.CLARIFICATION_REQUESTED,
+    ];
+
+    if (!modifiableStatuses.includes(request.status)) {
+      throw new ApiError(
+        400,
+        "This request is not currently in a modification state",
+      );
+    }
+
+    const normalizeItemType = (value) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+
+    const normalizeUnit = (value) =>
+      String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, "_");
+
+    const itemRows = Array.isArray(payload.items)
+      ? payload.items
+      : [
+          {
+            item_type: payload.item_type || payload.itemType,
+            item_name: payload.item_name || payload.itemName,
+            item_description:
+              payload.item_description || payload.itemDescription || "",
+            technical_specifications:
+              payload.technical_specifications ||
+              payload.technicalSpecifications,
+            quantity: payload.quantity,
+            estimated_cost: payload.estimated_cost || payload.estimatedCost,
+            funding_source: payload.funding_source || payload.fundingSource,
+            department: payload.department,
+            required_date: payload.required_date || payload.requiredDate,
+          },
+        ];
+
+    if (!itemRows.length) {
+      throw new ApiError(400, "At least one item is required");
+    }
+
+    const normalizedItems = itemRows.map((item, index) => {
+      const itemType = normalizeItemType(item.item_type || item.itemType);
+      const itemName = String(item.item_name || item.itemName || "").trim();
+      const itemDescription = String(
+        item.item_description || item.itemDescription || "",
+      ).trim();
+      const technicalSpecifications = String(
+        item.technical_specifications || item.technicalSpecifications || "",
+      ).trim();
+      const quantity = Number(item.quantity);
+      const estimatedCost = Number(item.estimated_cost || item.estimatedCost);
+      const fundingSource = String(
+        item.funding_source || item.fundingSource || "",
+      )
+        .trim()
+        .toUpperCase();
+      const department = normalizeUnit(item.department || "");
+      const requiredDate = String(
+        item.required_date || item.requiredDate || "",
+      ).trim();
+
+      if (!["IT", "NON_IT"].includes(itemType)) {
+        throw new ApiError(
+          400,
+          `Invalid item type for item #${index + 1}. Use IT or NON_IT`,
+        );
+      }
+
+      if (!itemName) {
+        throw new ApiError(400, `Item name is required for item #${index + 1}`);
+      }
+
+      if (!technicalSpecifications) {
+        throw new ApiError(
+          400,
+          `Technical specifications are required for item #${index + 1}`,
+        );
+      }
+
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        throw new ApiError(
+          400,
+          `Quantity must be greater than zero for item #${index + 1}`,
+        );
+      }
+
+      if (!Number.isFinite(estimatedCost) || estimatedCost < 0) {
+        throw new ApiError(
+          400,
+          `Estimated cost must be zero or positive for item #${index + 1}`,
+        );
+      }
+
+      if (!FUNDING_SOURCES.includes(fundingSource)) {
+        throw new ApiError(
+          400,
+          `Valid funding source is required for item #${index + 1}`,
+        );
+      }
+
+      if (!department) {
+        throw new ApiError(
+          400,
+          `Faculty/Unit is required for item #${index + 1}`,
+        );
+      }
+
+      if (!REQUEST_UNITS.includes(department)) {
+        throw new ApiError(
+          400,
+          `Faculty/Unit is invalid for item #${index + 1}`,
+        );
+      }
+
+      if (!requiredDate || Number.isNaN(Date.parse(requiredDate))) {
+        throw new ApiError(
+          400,
+          `Valid required date is required for item #${index + 1}`,
+        );
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const parsedRequiredDate = new Date(requiredDate);
+      parsedRequiredDate.setHours(0, 0, 0, 0);
+
+      if (parsedRequiredDate < today) {
+        throw new ApiError(
+          400,
+          `Required date cannot be in the past for item #${index + 1}`,
+        );
+      }
+
+      return {
+        itemType,
+        itemName,
+        itemDescription,
+        technicalSpecifications,
+        quantity,
+        estimatedCost,
+        fundingSource,
+        department,
+        requiredDate,
+      };
+    });
+
+    const groupingKeys = new Set(
+      normalizedItems.map(
+        (item) =>
+          `${item.itemType}|${item.fundingSource}|${item.department}|${item.requiredDate}`,
+      ),
+    );
+
+    if (groupingKeys.size > 1) {
+      throw new ApiError(
+        400,
+        "All modified items in this request must keep the same type, funding source, unit, and required date",
+      );
+    }
+
+    const firstItem = normalizedItems[0];
+    const checkerRole =
+      firstItem.itemType === "IT"
+        ? USER_ROLES.DIRECTOR_ICT
+        : USER_ROLES.MAINTENANCE_ENGINEER;
+
+    let checkers = await userRepository.findByRole(checkerRole);
+    if (!checkers.length) {
+      checkers = await userRepository.findByRole(
+        USER_ROLES.SPECIFICATION_CHECKER,
+      );
+    }
+
+    if (!checkers.length) {
+      throw new ApiError(
+        400,
+        `No available specification checker for role ${checkerRole}`,
+      );
+    }
+
+    const approverRole = getApprovalRoleForUnit(firstItem.department);
+    const approvers =
+      approverRole === USER_ROLES.DEAN
+        ? await userRepository.findByRoleAndDepartment(
+            approverRole,
+            firstItem.department,
+          )
+        : await userRepository.findByRole(approverRole);
+
+    if (!approvers.length) {
+      throw new ApiError(
+        400,
+        `No available approver for role ${approverRole} (${firstItem.department} faculty/unit)`,
+      );
+    }
+
+    const totalQuantity = normalizedItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
+    const totalEstimatedCost = Number(
+      normalizedItems
+        .reduce((sum, item) => sum + item.estimatedCost, 0)
+        .toFixed(2),
+    );
+
+    const updated = await requestRepository.updateRequestAndItems({
+      requestId,
+      itemName:
+        normalizedItems.length === 1
+          ? firstItem.itemName
+          : `${firstItem.itemName} (+${normalizedItems.length - 1} more items)`,
+      itemDescription:
+        normalizedItems.length === 1
+          ? firstItem.itemDescription || null
+          : `Multi-item ${firstItem.itemType} request containing ${normalizedItems.length} items`,
+      technicalSpecifications: normalizedItems
+        .map(
+          (item, index) =>
+            `${index + 1}. ${item.itemName}: ${item.technicalSpecifications}`,
+        )
+        .join("\n"),
+      itemType: firstItem.itemType,
+      quantity: totalQuantity,
+      estimatedCost: totalEstimatedCost,
+      fundingSource: firstItem.fundingSource,
+      justification: payload.justification,
+      department: firstItem.department,
+      requiredDate: firstItem.requiredDate,
+      specificationCheckerId: checkers[0].id,
+      status: REQUEST_STATUS.SPEC_REVIEW_PENDING,
+      items: normalizedItems,
+    });
+
+    if (!updated) {
+      throw new ApiError(404, "Request not found");
+    }
+
+    await approvalRepository.replaceApprovalSlots(updated.id, approvers);
+    await approvalRepository.clearItemDecisionsByRequest(updated.id);
+
+    await notificationService.notifyUsers(
+      [user.id, checkers[0].id, ...approvers.map((a) => a.id)],
+      {
+        eventType: "REQUEST_MODIFIED_AND_RESUBMITTED",
+        subject: `Request modified and resubmitted (${updated.request_id})`,
+        message: `Request ${updated.request_id} was modified by requester and resubmitted for specification checking.`,
+      },
+    );
+
+    return updated;
+  },
+
   async myRequests(userId) {
     return requestRepository.listByRequesterId(userId);
   },

@@ -70,6 +70,10 @@ function App() {
               element={<RequestSubmission user={user} />}
             />
             <Route
+              path="/request/:id/modify"
+              element={<RequestSubmission user={user} />}
+            />
+            <Route
               path="/request/:id"
               element={<RequestDetails user={user} />}
             />

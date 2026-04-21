@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api/client";
 import Card from "../components/Card";
 import Input from "../components/Input";
@@ -24,6 +24,8 @@ const createEmptyItem = () => ({
 
 export default function RequestSubmission({ user }) {
   const navigate = useNavigate();
+  const { id: modifyRequestId } = useParams();
+  const isModifyMode = Boolean(modifyRequestId);
   const today = new Date();
   const minRequiredDate = new Date(
     today.getTime() - today.getTimezoneOffset() * 60000,
@@ -31,6 +33,7 @@ export default function RequestSubmission({ user }) {
     .toISOString()
     .slice(0, 10);
   const [loading, setLoading] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -40,6 +43,69 @@ export default function RequestSubmission({ user }) {
     items: [createEmptyItem()],
     justification: "",
   });
+
+  useEffect(() => {
+    if (!isModifyMode) {
+      return;
+    }
+
+    const loadExistingRequest = async () => {
+      setLoadingExisting(true);
+      setError("");
+
+      try {
+        const response = await api.get(`/requests/${modifyRequestId}`);
+        const request = response.data.data || response.data;
+
+        const rawItems =
+          Array.isArray(request.items) && request.items.length > 0
+            ? request.items
+            : [
+                {
+                  item_type: request.item_type,
+                  item_name: request.item_name,
+                  item_description: request.item_description,
+                  technical_specifications: request.technical_specifications,
+                  quantity: request.quantity,
+                  estimated_cost: request.estimated_cost,
+                  funding_source: request.funding_source,
+                  department: request.department,
+                  required_date: request.required_date,
+                },
+              ];
+
+        const normalizedItems = rawItems.map((item) => ({
+          item_type: item.item_type || "IT",
+          item_name: item.item_name || "",
+          item_description: item.item_description || "",
+          technical_specifications: item.technical_specifications || "",
+          quantity: item.quantity != null ? String(item.quantity) : "",
+          estimated_cost:
+            item.estimated_cost != null ? String(item.estimated_cost) : "",
+          funding_source: item.funding_source || "",
+          department: item.department || "",
+          required_date: item.required_date
+            ? new Date(item.required_date).toISOString().slice(0, 10)
+            : "",
+        }));
+
+        setFormData({
+          items:
+            normalizedItems.length > 0 ? normalizedItems : [createEmptyItem()],
+          justification: request.justification || "",
+        });
+      } catch (err) {
+        const errorMsg =
+          err.response?.data?.message ||
+          "Failed to load request for modification";
+        setError(errorMsg);
+      } finally {
+        setLoadingExisting(false);
+      }
+    };
+
+    loadExistingRequest();
+  }, [isModifyMode, modifyRequestId]);
 
   const itemTypeOptions = [
     { label: "IT Equipment", value: "IT" },
@@ -255,7 +321,9 @@ export default function RequestSubmission({ user }) {
     try {
       console.log("📤 Sending request payload:", pendingPayload);
 
-      const response = await api.post("/requests", pendingPayload);
+      const response = isModifyMode
+        ? await api.put(`/requests/${modifyRequestId}/modify`, pendingPayload)
+        : await api.post("/requests", pendingPayload);
 
       console.log("✅ Request created successfully:", response.data);
 
@@ -263,12 +331,19 @@ export default function RequestSubmission({ user }) {
       const isSplitResponse = Array.isArray(created?.requests);
 
       setSuccess(
-        isSplitResponse
-          ? `Multi-item request submitted successfully as ${created.requests.length} requests by item type.`
-          : "Request submitted successfully!",
+        isModifyMode
+          ? "Request modified and resubmitted successfully."
+          : isSplitResponse
+            ? `Multi-item request submitted successfully as ${created.requests.length} requests by item type.`
+            : "Request submitted successfully!",
       );
 
       setTimeout(() => {
+        if (isModifyMode) {
+          navigate(`/request/${created.id || modifyRequestId}`);
+          return;
+        }
+
         if (isSplitResponse) {
           console.log(
             "🎯 Redirecting to dashboard after split request creation",
@@ -297,11 +372,25 @@ export default function RequestSubmission({ user }) {
     }
   };
 
+  if (loadingExisting) {
+    return (
+      <div className="loading-state">Loading request for modification...</div>
+    );
+  }
+
   return (
     <div className="request-submission">
       <div className="page-header">
-        <h1>Submit New Purchase Request</h1>
-        <p>Fill in all required fields to submit your procurement request</p>
+        <h1>
+          {isModifyMode
+            ? "Modify Purchase Request"
+            : "Submit New Purchase Request"}
+        </h1>
+        <p>
+          {isModifyMode
+            ? "Update your request details and resubmit for review"
+            : "Fill in all required fields to submit your procurement request"}
+        </p>
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
@@ -591,7 +680,13 @@ export default function RequestSubmission({ user }) {
 
           <div className="form-actions">
             <Button type="submit" disabled={loading}>
-              {loading ? "Submitting..." : "Submit Request"}
+              {loading
+                ? isModifyMode
+                  ? "Resubmitting..."
+                  : "Submitting..."
+                : isModifyMode
+                  ? "Save Changes and Resubmit"
+                  : "Submit Request"}
             </Button>
             <Button
               type="button"
@@ -691,7 +786,13 @@ export default function RequestSubmission({ user }) {
               Cancel
             </Button>
             <Button type="button" onClick={confirmAndSubmit} disabled={loading}>
-              {loading ? "Submitting..." : "Proceed and Submit"}
+              {loading
+                ? isModifyMode
+                  ? "Resubmitting..."
+                  : "Submitting..."
+                : isModifyMode
+                  ? "Proceed and Resubmit"
+                  : "Proceed and Submit"}
             </Button>
           </div>
         </div>

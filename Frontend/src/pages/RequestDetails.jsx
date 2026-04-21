@@ -68,11 +68,11 @@ export default function RequestDetails({ user }) {
       console.log("✅ Specification confirmed successfully");
 
       const nextStatus =
-        action === "ACCEPT" ? "APPROVED" : "SPEC_REWORK_REQUESTED";
+        action === "ACCEPT" ? "APPROVAL_PENDING" : "SPEC_REWORK_REQUESTED";
       setRequest((prev) => ({ ...prev, status: nextStatus }));
       setSuccess(
         action === "ACCEPT"
-          ? "Specifications accepted. Request is now approved and ready for procurement."
+          ? "Specifications accepted. Request is now pending final approval."
           : "Modification requested. The specification checker has been notified.",
       );
     } catch (err) {
@@ -132,6 +132,10 @@ export default function RequestDetails({ user }) {
             required_date: request.required_date,
           },
         ];
+
+  const requiresModification = String(
+    request.checked_specifications || "",
+  ).includes("REQUEST_MODIFICATION");
 
   return (
     <div className="request-details">
@@ -266,10 +270,15 @@ export default function RequestDetails({ user }) {
         request.requester_id === user?.id && (
           <Card className="action-card">
             <div className="detail-section">
-              <h2>Specification Review Returned</h2>
+              <h2>
+                {requiresModification
+                  ? "Modification Required"
+                  : "Specification Review Returned"}
+              </h2>
               <p>
-                The checker has reviewed your specifications. Choose one option
-                to continue.
+                {requiresModification
+                  ? "The checker requested modifications. Please update and resubmit this request."
+                  : "The checker has reviewed your specifications. Choose one option to continue."}
               </p>
               {request.checked_specifications && (
                 <div style={{ marginBottom: "1rem" }}>
@@ -280,23 +289,41 @@ export default function RequestDetails({ user }) {
               <div
                 style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}
               >
-                <Button
-                  variant="success"
-                  onClick={() => handleConfirmSpecification("ACCEPT")}
-                  disabled={actionLoading}
-                >
-                  {actionLoading ? "Submitting..." : "Accept and Continue"}
-                </Button>
+                {!requiresModification && (
+                  <Button
+                    variant="success"
+                    onClick={() => handleConfirmSpecification("ACCEPT")}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? "Submitting..." : "Accept and Continue"}
+                  </Button>
+                )}
                 <Button
                   variant="secondary"
-                  onClick={() =>
-                    handleConfirmSpecification("REQUEST_MODIFICATION")
-                  }
-                  disabled={actionLoading}
+                  onClick={() => navigate(`/request/${id}/modify`)}
                 >
-                  {actionLoading ? "Submitting..." : "Request Modification"}
+                  Modify Request
                 </Button>
               </div>
+            </div>
+          </Card>
+        )}
+
+      {request.status === "CLARIFICATION_REQUESTED" &&
+        request.requester_id === user?.id && (
+          <Card className="action-card">
+            <div className="detail-section">
+              <h2>Clarification / Modification Requested</h2>
+              <p>
+                A final approver requested modifications. Update this request
+                and resubmit it for specification review.
+              </p>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/request/${id}/modify`)}
+              >
+                Modify and Resubmit
+              </Button>
             </div>
           </Card>
         )}

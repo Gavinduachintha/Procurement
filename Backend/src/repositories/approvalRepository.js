@@ -12,6 +12,24 @@ export const approvalRepository = {
     }
   },
 
+  async replaceApprovalSlots(purchaseRequestId, approvers) {
+    await query(
+      `DELETE FROM approvals
+       WHERE purchase_request_id = $1`,
+      [purchaseRequestId],
+    );
+
+    await this.ensureApprovalSlots(purchaseRequestId, approvers);
+  },
+
+  async clearItemDecisionsByRequest(purchaseRequestId) {
+    await query(
+      `DELETE FROM approval_item_decisions
+       WHERE purchase_request_id = $1`,
+      [purchaseRequestId],
+    );
+  },
+
   async decide({ purchaseRequestId, approverId, decision, comments }) {
     const { rows } = await query(
       `UPDATE approvals

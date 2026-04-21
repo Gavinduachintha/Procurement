@@ -18,6 +18,7 @@ router.get(
   requestController.assignedForCheckerAll,
 );
 router.get("/approved/without-jobs", requestController.approvedWithoutJobs);
+router.put("/:id/modify", requestController.modifyByRequester);
 router.get("/:id", requestController.getById);
 
 export default router;

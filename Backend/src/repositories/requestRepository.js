@@ -203,6 +203,117 @@ export const requestRepository = {
     return rows[0];
   },
 
+  async updateRequestAndItems({
+    requestId,
+    itemName,
+    itemDescription,
+    technicalSpecifications,
+    itemType,
+    quantity,
+    estimatedCost,
+    fundingSource,
+    justification,
+    department,
+    requiredDate,
+    specificationCheckerId,
+    status,
+    items,
+  }) {
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const updateRequestResult = await client.query(
+        `UPDATE purchase_requests
+         SET item_name = $2,
+             item_description = $3,
+             technical_specifications = $4,
+             item_type = $5,
+             quantity = $6,
+             estimated_cost = $7,
+             funding_source = $8,
+             justification = $9,
+             department = $10,
+             required_date = $11,
+             specification_checker_id = $12,
+             checked_specifications = NULL,
+             status = $13,
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING *`,
+        [
+          requestId,
+          itemName,
+          itemDescription || null,
+          technicalSpecifications,
+          itemType,
+          quantity,
+          estimatedCost,
+          fundingSource,
+          justification,
+          department,
+          requiredDate,
+          specificationCheckerId,
+          status,
+        ],
+      );
+
+      const updatedRequest = updateRequestResult.rows[0] || null;
+      if (!updatedRequest) {
+        await client.query("ROLLBACK");
+        return null;
+      }
+
+      await client.query(
+        `DELETE FROM purchase_request_items
+         WHERE purchase_request_id = $1`,
+        [requestId],
+      );
+
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
+
+        await client.query(
+          `INSERT INTO purchase_request_items (
+             purchase_request_id,
+             line_no,
+             item_type,
+             item_name,
+             item_description,
+             technical_specifications,
+             quantity,
+             estimated_cost,
+             funding_source,
+             department,
+             required_date
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            requestId,
+            index + 1,
+            item.itemType,
+            item.itemName,
+            item.itemDescription || null,
+            item.technicalSpecifications,
+            item.quantity,
+            item.estimatedCost,
+            item.fundingSource,
+            item.department,
+            item.requiredDate,
+          ],
+        );
+      }
+
+      await client.query("COMMIT");
+      return updatedRequest;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
+
   async listForApprovals() {
     const { rows } = await query(
       `SELECT * FROM purchase_requests

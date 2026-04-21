@@ -34,4 +34,13 @@ export const requestController = {
     const request = await requestService.getRequest(Number(req.params.id));
     res.json(request);
   }),
+
+  modifyByRequester: asyncHandler(async (req, res) => {
+    const request = await requestService.modifyRequest(
+      req.user,
+      Number(req.params.id),
+      req.body,
+    );
+    res.json(request);
+  }),
 };

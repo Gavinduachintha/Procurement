@@ -288,9 +288,21 @@ export const specificationService = {
     }
 
     const action = payload.action;
+    const modificationRequestedByChecker = String(
+      request.checked_specifications || "",
+    )
+      .toUpperCase()
+      .includes("REQUEST_MODIFICATION");
     console.log("📋 Backend: Action:", action);
 
     if (action === "ACCEPT") {
+      if (modificationRequestedByChecker) {
+        throw new ApiError(
+          400,
+          "Modification was requested by the checker. Please modify and resubmit this request.",
+        );
+      }
+
       const approverRole = getApprovalRoleForUnit(request.department);
 
       const updated = await requestRepository.updateStatus(
