@@ -22,10 +22,6 @@ router.post(
   "/jobs/:jobId/generate-letters",
   procurementController.generateLetters,
 );
-router.post(
-  "/jobs/:jobId/generate-letters-pdf",
-  procurementController.generateLettersPdf,
-);
 router.get("/jobs/:jobId/schedule", procurementController.schedule);
 
 // Alternative routes (matching frontend expectations)

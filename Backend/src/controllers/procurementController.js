@@ -69,21 +69,6 @@ export const procurementController = {
     res.json(result);
   }),
 
-  generateLettersPdf: asyncHandler(async (req, res) => {
-    const result = await procurementService.generateQuotationLettersPdf(
-      req.user,
-      Number(req.params.jobId),
-      req.body,
-    );
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${result.fileName}"`,
-    );
-    res.send(Buffer.from(result.pdfBytes));
-  }),
-
   schedule: asyncHandler(async (req, res) => {
     const schedule = await procurementService.getProcurementSchedule(
       Number(req.params.jobId),

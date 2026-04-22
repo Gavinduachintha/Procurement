@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { pdf } from "@react-pdf/renderer";
 import api from "../api/client";
 import Card from "../components/Card";
 import Button from "../components/Button";
@@ -6,6 +7,7 @@ import Select from "../components/Select";
 import Input from "../components/Input";
 import Alert from "../components/Alert";
 import Modal from "../components/Modal";
+import QuotationRequestLetter from "../components/QuotationRequestLetter";
 import "./SupplyBranchDashboard.css";
 
 const PROCUREMENT_METHODS = [
@@ -34,6 +36,11 @@ const getDefaultSubmissionDeadline = (daysAhead = 7) => {
   return date.toISOString().slice(0, 10);
 };
 
+const normalizeId = (value) => {
+  const id = Number(value);
+  return Number.isFinite(id) ? id : null;
+};
+
 export default function SupplyBranchDashboard({ user }) {
   const [approvedRequests, setApprovedRequests] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -56,6 +63,7 @@ export default function SupplyBranchDashboard({ user }) {
   const [subjectClerks, setSubjectClerks] = useState([]);
   const [selectedClerkId, setSelectedClerkId] = useState("");
   const [clerkAssignHint, setClerkAssignHint] = useState("");
+  const [suppliersSaved, setSuppliersSaved] = useState(false);
 
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -145,6 +153,7 @@ export default function SupplyBranchDashboard({ user }) {
     setSupplierOptions([]);
     setSelectedSuppliers([]);
     setSubmissionDeadline(getDefaultSubmissionDeadline());
+    setSuppliersSaved(false);
     setIsModalOpen(true);
   };
 
@@ -264,6 +273,7 @@ export default function SupplyBranchDashboard({ user }) {
 
     setActionLoading(true);
     setError("");
+    setSuppliersSaved(false);
 
     try {
       const response = await api.post(
@@ -288,6 +298,7 @@ export default function SupplyBranchDashboard({ user }) {
     setSelectedCategory(nextCategory);
     setSupplierOptions([]);
     setSelectedSuppliers([]);
+    setSuppliersSaved(false);
   };
 
   const syncCategoryAndGetSuppliers = async () => {
@@ -305,10 +316,16 @@ export default function SupplyBranchDashboard({ user }) {
   };
 
   const toggleSupplier = (supplierId) => {
+    const normalizedId = normalizeId(supplierId);
+    if (normalizedId === null) {
+      return;
+    }
+
+    setSuppliersSaved(false);
     setSelectedSuppliers((prev) =>
-      prev.includes(supplierId)
-        ? prev.filter((id) => id !== supplierId)
-        : [...prev, supplierId],
+      prev.includes(normalizedId)
+        ? prev.filter((id) => id !== normalizedId)
+        : [...prev, normalizedId],
     );
   };
 
@@ -327,11 +344,13 @@ export default function SupplyBranchDashboard({ user }) {
     try {
       const suppliersForCategory = await syncCategoryAndGetSuppliers();
       const validIds = new Set(
-        suppliersForCategory.map((supplier) => supplier.id),
+        suppliersForCategory
+          .map((supplier) => normalizeId(supplier.id))
+          .filter((id) => id !== null),
       );
       const normalizedSupplierIds = selectedSuppliers
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value));
+        .map((value) => normalizeId(value))
+        .filter((value) => value !== null);
       const invalidSelection = normalizedSupplierIds.some(
         (id) => !validIds.has(id),
       );
@@ -350,18 +369,26 @@ export default function SupplyBranchDashboard({ user }) {
         supplierIds: normalizedSupplierIds,
       });
 
-      setSuccess("Suppliers selected successfully.");
-      setIsModalOpen(false);
+      setSuppliersSaved(true);
+      setSuccess(
+        "Suppliers selected successfully. You can now download the PO letter.",
+      );
       await loadData();
     } catch (err) {
+      setSuppliersSaved(false);
       setError(err.response?.data?.message || "Failed to select suppliers");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const generateLettersPdf = async () => {
+  const downloadPoLetter = async () => {
     if (!selectedJob) {
+      return;
+    }
+
+    if (!suppliersSaved) {
+      setError("Save suppliers before downloading the PO letter");
       return;
     }
 
@@ -387,11 +414,13 @@ export default function SupplyBranchDashboard({ user }) {
     try {
       const suppliersForCategory = await syncCategoryAndGetSuppliers();
       const validIds = new Set(
-        suppliersForCategory.map((supplier) => supplier.id),
+        suppliersForCategory
+          .map((supplier) => normalizeId(supplier.id))
+          .filter((id) => id !== null),
       );
       const normalizedSupplierIds = selectedSuppliers
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value));
+        .map((value) => normalizeId(value))
+        .filter((value) => value !== null);
       const invalidSelection = normalizedSupplierIds.some(
         (id) => !validIds.has(id),
       );
@@ -410,25 +439,39 @@ export default function SupplyBranchDashboard({ user }) {
         supplierIds: normalizedSupplierIds,
       });
 
-      const response = await api.post(
-        `/procurement/jobs/${selectedJob.id}/generate-letters-pdf`,
+      const lettersResponse = await api.post(
+        `/procurement/jobs/${selectedJob.id}/generate-letters`,
         {
           submissionDeadline,
         },
-        {
-          responseType: "blob",
-        },
       );
 
-      const disposition = response.headers["content-disposition"] || "";
-      const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
-      const fileName =
-        match?.[1] ||
-        `quotation-requests-${selectedJob.job_number || selectedJob.id}.pdf`;
+      const letters = parseData(lettersResponse) || {};
+      const recipients = Array.isArray(letters.recipients)
+        ? letters.recipients
+        : suppliersForCategory.filter((supplier) =>
+            normalizedSupplierIds.includes(normalizeId(supplier.id)),
+          );
 
-      const blob = new Blob([response.data], {
-        type: "application/pdf",
-      });
+      const letterContent =
+        letters.letterContent ||
+        [
+          "University Procurement Unit",
+          `Job Number: ${selectedJob.job_number || selectedJob.id}`,
+          `Request ID: ${selectedJob.request_id || selectedJob.purchase_request_id || "N/A"}`,
+          `Item: ${selectedJob.item_name || "N/A"}`,
+          `Submission Deadline: ${submissionDeadline}`,
+        ].join("\n");
+
+      const blob = await pdf(
+        <QuotationRequestLetter
+          suppliers={recipients}
+          content={letterContent}
+          deadline={submissionDeadline}
+        />,
+      ).toBlob();
+
+      const fileName = `po-letter-${selectedJob.job_number || selectedJob.id}.pdf`;
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = blobUrl;
@@ -438,11 +481,11 @@ export default function SupplyBranchDashboard({ user }) {
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
 
-      setSuccess("Suppliers saved and quotation letter PDF generated.");
+      setSuccess("PO letter downloaded successfully.");
       setIsModalOpen(false);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to generate letters PDF");
+      setError(err.response?.data?.message || "Failed to download PO letter");
     } finally {
       setActionLoading(false);
     }
@@ -680,7 +723,7 @@ export default function SupplyBranchDashboard({ user }) {
               <label key={supplier.id} className="supplier-item">
                 <input
                   type="checkbox"
-                  checked={selectedSuppliers.includes(supplier.id)}
+                  checked={selectedSuppliers.includes(normalizeId(supplier.id))}
                   onChange={() => toggleSupplier(supplier.id)}
                 />
                 <span>
@@ -705,18 +748,17 @@ export default function SupplyBranchDashboard({ user }) {
           >
             {actionLoading ? "Saving..." : "Save Suppliers"}
           </Button>
-          <Button
-            variant="success"
-            onClick={generateLettersPdf}
-            disabled={
-              !selectedCategory ||
-              selectedSuppliers.length === 0 ||
-              !submissionDeadline ||
-              actionLoading
-            }
-          >
-            {actionLoading ? "Generating..." : "Generate Letters PDF"}
-          </Button>
+          {suppliersSaved && (
+            <Button
+              variant="success"
+              onClick={downloadPoLetter}
+              disabled={
+                !selectedCategory || !submissionDeadline || actionLoading
+              }
+            >
+              {actionLoading ? "Downloading..." : "Download PO Letter"}
+            </Button>
+          )}
           <Button variant="secondary" onClick={closeModal}>
             Close
           </Button>
