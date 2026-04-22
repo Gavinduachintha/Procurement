@@ -8,6 +8,7 @@ import Input from "../components/Input";
 import Alert from "../components/Alert";
 import Modal from "../components/Modal";
 import QuotationRequestLetter from "../components/QuotationRequestLetter";
+import universityLogo from "../../assets/logo.png";
 import "./SupplyBranchDashboard.css";
 
 const PROCUREMENT_METHODS = [
@@ -48,6 +49,17 @@ const formatAmount = (value) => {
   }
 
   return amount.toFixed(2);
+};
+
+const getMethodLabel = (methodCode) => {
+  if (!methodCode) {
+    return "N/A";
+  }
+
+  const method = PROCUREMENT_METHODS.find(
+    (entry) => entry.value === methodCode,
+  );
+  return method ? method.label : methodCode;
 };
 
 export default function SupplyBranchDashboard({ user }) {
@@ -462,27 +474,32 @@ export default function SupplyBranchDashboard({ user }) {
             normalizedSupplierIds.includes(normalizeId(supplier.id)),
           );
 
-      const letterContent =
-        letters.letterContent ||
-        [
-          "University Procurement Unit",
-          `Job Number: ${selectedJob.job_number || selectedJob.id}`,
-          `Request ID: ${selectedJob.request_id || selectedJob.purchase_request_id || "N/A"}`,
-          `Item: ${selectedJob.item_name || "N/A"}`,
-          `Amount: ${formatAmount(selectedJob.display_amount || selectedJob.total_amount || selectedJob.request_amount)}`,
-          `Submission Deadline: ${submissionDeadline}`,
-        ].join("\n");
+      const methodLabel = getMethodLabel(selectedJob.procurement_method);
+      const jobNumberWithMethod = `${selectedJob.job_number || selectedJob.id} (${methodLabel})`;
+      const contactInformation = [
+        user?.full_name ? `Officer: ${user.full_name}` : null,
+        user?.email ? `Email: ${user.email}` : null,
+        "Supply Branch, Wayamba University of Sri Lanka, Kuliyapitiya.",
+      ]
+        .filter(Boolean)
+        .join(" | ");
 
       const blob = await pdf(
         <QuotationRequestLetter
           suppliers={recipients}
-          content={letterContent}
+          logoSrc={universityLogo}
+          universityName="WAYAMBA UNIVERSITY OF SRI LANKA"
+          location="Kuliyapitiya."
+          letterTitle="PURCHASE ORDER FOR STORES & SERVICES"
+          jobNumberWithMethod={jobNumberWithMethod}
+          itemDescription={
+            selectedJob.item_description || selectedJob.item_name || "N/A"
+          }
+          technicalSpecifications={
+            selectedJob.technical_specifications || "N/A"
+          }
           deadline={submissionDeadline}
-          amount={formatAmount(
-            selectedJob.display_amount ||
-              selectedJob.total_amount ||
-              selectedJob.request_amount,
-          )}
+          contactInformation={contactInformation}
         />,
       ).toBlob();
 
