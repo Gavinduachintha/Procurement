@@ -62,6 +62,7 @@ export default function SupplyBranchDashboard({ user }) {
   const [selectedMethod, setSelectedMethod] = useState("");
   const [subjectClerks, setSubjectClerks] = useState([]);
   const [selectedClerkId, setSelectedClerkId] = useState("");
+  const [clerkAssignHint, setClerkAssignHint] = useState("");
 
   const [tecRows, setTecRows] = useState([]);
   const [committeeReport, setCommitteeReport] = useState(null);
@@ -186,6 +187,7 @@ export default function SupplyBranchDashboard({ user }) {
     setSelectedClerkId(
       job.assigned_clerk_id ? String(job.assigned_clerk_id) : "",
     );
+    setClerkAssignHint("");
     setIsModalOpen(true);
     setActionLoading(true);
     setError("");
@@ -195,7 +197,71 @@ export default function SupplyBranchDashboard({ user }) {
         params: { role: "SUBJECT_CLERK" },
       });
       const data = parseData(response);
-      setSubjectClerks(Array.isArray(data) ? data : []);
+
+      const clerks = Array.isArray(data) ? data : [];
+
+      if (!job.procurement_method) {
+        setSubjectClerks(clerks);
+        setClerkAssignHint(
+          "Set procurement method first. Then assign a method specialist clerk.",
+        );
+        return;
+      }
+
+      const jobsWithClerk = jobs.filter((entry) => entry.assigned_clerk_id);
+      const currentMethod = job.procurement_method;
+      const existingSpecialistIds = [
+        ...new Set(
+          jobsWithClerk
+            .filter((entry) => entry.procurement_method === currentMethod)
+            .map((entry) => String(entry.assigned_clerk_id)),
+        ),
+      ];
+
+      const clerkMethodMap = jobsWithClerk.reduce((acc, entry) => {
+        const key = String(entry.assigned_clerk_id);
+        if (!acc[key]) {
+          acc[key] = new Set();
+        }
+
+        if (entry.procurement_method) {
+          acc[key].add(entry.procurement_method);
+        }
+
+        return acc;
+      }, {});
+
+      const filtered = clerks.filter((clerk) => {
+        const clerkId = String(clerk.id);
+
+        if (existingSpecialistIds.length > 0) {
+          return existingSpecialistIds.includes(clerkId);
+        }
+
+        const methods = clerkMethodMap[clerkId]
+          ? Array.from(clerkMethodMap[clerkId])
+          : [];
+
+        return (
+          methods.length === 0 || methods.every((m) => m === currentMethod)
+        );
+      });
+
+      setSubjectClerks(filtered);
+
+      if (existingSpecialistIds.length > 0) {
+        setClerkAssignHint(
+          `${currentMethod} already has a designated specialist. Only that clerk can be assigned.`,
+        );
+      } else {
+        setClerkAssignHint(
+          `Assign a ${currentMethod} specialist clerk. This clerk will be restricted to ${currentMethod} jobs.`,
+        );
+      }
+
+      if (!filtered.some((clerk) => String(clerk.id) === selectedClerkId)) {
+        setSelectedClerkId(filtered[0] ? String(filtered[0].id) : "");
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load clerks");
     } finally {
@@ -886,6 +952,14 @@ export default function SupplyBranchDashboard({ user }) {
           Job:{" "}
           <strong>{selectedJob?.job_number || `JOB-${selectedJob?.id}`}</strong>
         </p>
+
+        {selectedJob?.procurement_method && (
+          <p className="mb-2">
+            Method: <strong>{selectedJob.procurement_method}</strong>
+          </p>
+        )}
+
+        {clerkAssignHint && <p className="mb-2">{clerkAssignHint}</p>}
 
         <Select
           label="Subject Clerk"

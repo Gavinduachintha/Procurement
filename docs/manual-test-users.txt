@@ -93,25 +93,67 @@ Use these for manual registration in the app.
    Role: SUBJECT_CLERK
    Department: Supply Branch
 
-16) Full Name: Thenu TEC
+16) Full Name: Saman SQ Clerk
+   Email: saman.sq.clerk@univ.edu
+   Password: SqClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+17) Full Name: Hasini HQ Clerk
+   Email: hasini.hq.clerk@univ.edu
+   Password: HqClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+18) Full Name: Ravin ICB Clerk
+   Email: ravin.icb.clerk@univ.edu
+   Password: IcbClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+19) Full Name: Dinuli LIB Clerk
+   Email: dinuli.lib.clerk@univ.edu
+   Password: LibClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+20) Full Name: Kavish LNB Clerk
+   Email: kavish.lnb.clerk@univ.edu
+   Password: LnbClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+21) Full Name: Nethmi NCB Clerk
+   Email: nethmi.ncb.clerk@univ.edu
+   Password: NcbClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+22) Full Name: Tharindu Shopping Clerk
+   Email: tharindu.shopping.clerk@univ.edu
+   Password: ShopClerk@123
+   Role: SUBJECT_CLERK
+   Department: Supply Branch
+
+23) Full Name: Thenu TEC
    Email: thenu.tec@univ.edu
    Password: Tec@12345
    Role: TEC_MEMBER
    Department: Technical Evaluation Committee
 
-17) Full Name: Nimal Minor Committee
+24) Full Name: Nimal Minor Committee
    Email: nimal.minor.committee@univ.edu
    Password: Minor@12345
    Role: MINOR_COMMITTEE
    Department: Procurement Committee
 
-18) Full Name: Maya Major Committee
+25) Full Name: Maya Major Committee
    Email: maya.major.committee@univ.edu
    Password: Major@12345
    Role: MAJOR_COMMITTEE
    Department: Procurement Committee
 
-19) Full Name: Fari Finance
+26) Full Name: Fari Finance
    Email: fari.finance@univ.edu
    Password: Finance@12345
    Role: FINANCE_OFFICER

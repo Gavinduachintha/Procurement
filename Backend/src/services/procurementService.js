@@ -77,14 +77,54 @@ export const procurementService = {
       throw new ApiError(403, "Only supply branch users can assign clerks");
     }
 
+    const job = await jobRepository.findById(jobId);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    if (!job.procurement_method) {
+      throw new ApiError(
+        400,
+        "Procurement method must be selected before assigning a clerk",
+      );
+    }
+
     const clerk = await userRepository.findById(clerkId);
     if (!clerk || clerk.role !== USER_ROLES.SUBJECT_CLERK) {
       throw new ApiError(400, "Selected user is not a subject clerk");
     }
 
-    const job = await jobRepository.findById(jobId);
-    if (!job) {
-      throw new ApiError(404, "Job not found");
+    const existingSpecialistIds =
+      await jobRepository.listAssignedClerkIdsByMethod(job.procurement_method);
+
+    if (
+      existingSpecialistIds.length > 0 &&
+      !existingSpecialistIds.includes(Number(clerkId))
+    ) {
+      throw new ApiError(
+        400,
+        `This method already has a designated clerk specialist. Please assign the existing ${job.procurement_method} specialist.`,
+      );
+    }
+
+    const clerkAssignedJobs = await jobRepository.listByAssignedClerk(clerkId);
+    const clerkMethods = [
+      ...new Set(
+        clerkAssignedJobs
+          .map((assignedJob) => assignedJob.procurement_method)
+          .filter(Boolean),
+      ),
+    ];
+
+    const hasDifferentSpecialization = clerkMethods.some(
+      (method) => method !== job.procurement_method,
+    );
+
+    if (hasDifferentSpecialization) {
+      throw new ApiError(
+        400,
+        `Selected clerk is specialized for ${clerkMethods.join(", ")} and cannot be assigned to ${job.procurement_method}.`,
+      );
     }
 
     return jobRepository.assignClerk(jobId, clerkId);

@@ -113,4 +113,18 @@ export const jobRepository = {
     );
     return rows;
   },
+
+  async listAssignedClerkIdsByMethod(procurementMethod) {
+    const { rows } = await query(
+      `SELECT DISTINCT assigned_clerk_id
+       FROM jobs
+       WHERE procurement_method = $1
+         AND assigned_clerk_id IS NOT NULL`,
+      [procurementMethod],
+    );
+
+    return rows
+      .map((row) => Number(row.assigned_clerk_id))
+      .filter((id) => Number.isFinite(id));
+  },
 };
