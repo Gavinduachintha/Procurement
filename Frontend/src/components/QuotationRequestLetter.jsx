@@ -7,7 +7,13 @@ const styles = StyleSheet.create({
   section: { marginBottom: 10 },
 });
 
-const QuotationLetter = ({ supplier, suppliers, content, deadline }) => {
+const QuotationLetter = ({
+  supplier,
+  suppliers,
+  content,
+  deadline,
+  amount,
+}) => {
   const supplierList =
     Array.isArray(suppliers) && suppliers.length
       ? suppliers
@@ -32,6 +38,10 @@ const QuotationLetter = ({ supplier, suppliers, content, deadline }) => {
 
           <View style={styles.section}>
             <Text>{content}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text>Amount: {amount || "N/A"}</Text>
           </View>
 
           <View style={styles.section}>

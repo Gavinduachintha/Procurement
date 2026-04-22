@@ -41,6 +41,15 @@ const normalizeId = (value) => {
   return Number.isFinite(id) ? id : null;
 };
 
+const formatAmount = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return "0.00";
+  }
+
+  return amount.toFixed(2);
+};
+
 export default function SupplyBranchDashboard({ user }) {
   const [approvedRequests, setApprovedRequests] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -460,6 +469,7 @@ export default function SupplyBranchDashboard({ user }) {
           `Job Number: ${selectedJob.job_number || selectedJob.id}`,
           `Request ID: ${selectedJob.request_id || selectedJob.purchase_request_id || "N/A"}`,
           `Item: ${selectedJob.item_name || "N/A"}`,
+          `Amount: ${formatAmount(selectedJob.display_amount || selectedJob.total_amount || selectedJob.request_amount)}`,
           `Submission Deadline: ${submissionDeadline}`,
         ].join("\n");
 
@@ -468,6 +478,11 @@ export default function SupplyBranchDashboard({ user }) {
           suppliers={recipients}
           content={letterContent}
           deadline={submissionDeadline}
+          amount={formatAmount(
+            selectedJob.display_amount ||
+              selectedJob.total_amount ||
+              selectedJob.request_amount,
+          )}
         />,
       ).toBlob();
 
@@ -598,7 +613,14 @@ export default function SupplyBranchDashboard({ user }) {
                     </span>
                   </td>
                   <td>{job.assigned_clerk_name || "Not assigned"}</td>
-                  <td>${job.total_amount || "0.00"}</td>
+                  <td>
+                    $
+                    {formatAmount(
+                      job.display_amount ||
+                        job.total_amount ||
+                        job.request_amount,
+                    )}
+                  </td>
                   <td>
                     <div className="job-action-grid">
                       {canStartJobs && (
