@@ -58,7 +58,8 @@ const lkrFormatter = new Intl.NumberFormat("en-LK", {
   maximumFractionDigits: 2,
 });
 
-const formatCurrency = (value) => lkrFormatter.format(Number(formatAmount(value)));
+const formatCurrency = (value) =>
+  lkrFormatter.format(Number(formatAmount(value)));
 
 const formatDateTime = (value) => {
   if (!value) {
@@ -554,8 +555,8 @@ export default function SupplyBranchDashboard({ user }) {
         })
         .filter(Boolean);
 
-      const recipientsFromSelectedCategory = suppliersForCategory.filter((supplier) =>
-        selectedSupplierIdSet.has(normalizeId(supplier.id)),
+      const recipientsFromSelectedCategory = suppliersForCategory.filter(
+        (supplier) => selectedSupplierIdSet.has(normalizeId(supplier.id)),
       );
 
       const recipients =
