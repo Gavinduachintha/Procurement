@@ -91,12 +91,54 @@ export const jobRepository = {
   async listBySupplyBranchView() {
     const { rows } = await query(
       `SELECT j.*, pr.request_id, pr.item_name, pr.item_description, pr.technical_specifications,
+              pr.item_type, pr.quantity, pr.funding_source, pr.justification,
+              pr.required_date, pr.attachments, pr.checked_specifications,
               pr.department, pr.status AS request_status,
               pr.estimated_cost AS request_amount,
               COALESCE(j.total_amount, pr.estimated_cost) AS display_amount,
+              COALESCE(ri.request_items, '[]'::json) AS request_items,
+              COALESCE(js.selected_suppliers, '[]'::json) AS selected_suppliers,
               u.full_name AS assigned_clerk_name
        FROM jobs j
        JOIN purchase_requests pr ON pr.id = j.purchase_request_id
+       LEFT JOIN LATERAL (
+         SELECT json_agg(
+           json_build_object(
+             'id', pri.id,
+             'line_no', pri.line_no,
+             'item_type', pri.item_type,
+             'item_name', pri.item_name,
+             'item_description', pri.item_description,
+             'technical_specifications', pri.technical_specifications,
+             'quantity', pri.quantity,
+             'estimated_cost', pri.estimated_cost,
+             'funding_source', pri.funding_source,
+             'department', pri.department,
+             'required_date', pri.required_date
+           )
+           ORDER BY pri.line_no ASC
+         ) AS request_items
+         FROM purchase_request_items pri
+         WHERE pri.purchase_request_id = pr.id
+       ) ri ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT json_agg(
+           json_build_object(
+             'id', s.id,
+             'name', s.name,
+             'email', s.email,
+             'category', s.category,
+             'quoted_price', jss.quoted_price,
+             'quotation_received', jss.quotation_received,
+             'submission_date', jss.submission_date,
+             'evaluation_result', jss.evaluation_result
+           )
+           ORDER BY s.name ASC
+         ) AS selected_suppliers
+         FROM job_suppliers jss
+         JOIN suppliers s ON s.id = jss.supplier_id
+         WHERE jss.job_id = j.id
+       ) js ON TRUE
        LEFT JOIN users u ON u.id = j.assigned_clerk_id
        ORDER BY j.created_at DESC`,
     );
@@ -106,12 +148,54 @@ export const jobRepository = {
   async listByAssignedClerk(clerkId) {
     const { rows } = await query(
       `SELECT j.*, pr.request_id, pr.item_name, pr.item_description, pr.technical_specifications,
+              pr.item_type, pr.quantity, pr.funding_source, pr.justification,
+              pr.required_date, pr.attachments, pr.checked_specifications,
               pr.department, pr.status AS request_status,
               pr.estimated_cost AS request_amount,
               COALESCE(j.total_amount, pr.estimated_cost) AS display_amount,
+              COALESCE(ri.request_items, '[]'::json) AS request_items,
+              COALESCE(js.selected_suppliers, '[]'::json) AS selected_suppliers,
               u.full_name AS assigned_clerk_name
        FROM jobs j
        JOIN purchase_requests pr ON pr.id = j.purchase_request_id
+       LEFT JOIN LATERAL (
+         SELECT json_agg(
+           json_build_object(
+             'id', pri.id,
+             'line_no', pri.line_no,
+             'item_type', pri.item_type,
+             'item_name', pri.item_name,
+             'item_description', pri.item_description,
+             'technical_specifications', pri.technical_specifications,
+             'quantity', pri.quantity,
+             'estimated_cost', pri.estimated_cost,
+             'funding_source', pri.funding_source,
+             'department', pri.department,
+             'required_date', pri.required_date
+           )
+           ORDER BY pri.line_no ASC
+         ) AS request_items
+         FROM purchase_request_items pri
+         WHERE pri.purchase_request_id = pr.id
+       ) ri ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT json_agg(
+           json_build_object(
+             'id', s.id,
+             'name', s.name,
+             'email', s.email,
+             'category', s.category,
+             'quoted_price', jss.quoted_price,
+             'quotation_received', jss.quotation_received,
+             'submission_date', jss.submission_date,
+             'evaluation_result', jss.evaluation_result
+           )
+           ORDER BY s.name ASC
+         ) AS selected_suppliers
+         FROM job_suppliers jss
+         JOIN suppliers s ON s.id = jss.supplier_id
+         WHERE jss.job_id = j.id
+       ) js ON TRUE
        LEFT JOIN users u ON u.id = j.assigned_clerk_id
        WHERE j.assigned_clerk_id = $1
        ORDER BY j.created_at DESC`,

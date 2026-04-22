@@ -51,6 +51,40 @@ const formatAmount = (value) => {
   return amount.toFixed(2);
 };
 
+const formatDateTime = (value) => {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return date.toLocaleString();
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return "N/A";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "N/A";
+  }
+
+  return date.toLocaleDateString();
+};
+
+const toArray = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return [];
+};
+
 const getMethodLabel = (methodCode) => {
   if (!methodCode) {
     return "N/A";
@@ -265,6 +299,12 @@ export default function SupplyBranchDashboard({ user }) {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openDetailsModal = (job) => {
+    setSelectedJob(job);
+    setModalType("details");
+    setIsModalOpen(true);
   };
 
   const submitAssignClerk = async () => {
@@ -640,6 +680,14 @@ export default function SupplyBranchDashboard({ user }) {
                   </td>
                   <td>
                     <div className="job-action-grid">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openDetailsModal(job)}
+                      >
+                        View Details
+                      </Button>
+
                       {canStartJobs && (
                         <Button
                           size="sm"
@@ -667,6 +715,240 @@ export default function SupplyBranchDashboard({ user }) {
           </table>
         )}
       </Card>
+
+      <Modal
+        isOpen={isModalOpen && modalType === "details"}
+        onClose={closeModal}
+        title={`Job Details - ${selectedJob?.job_number || `JOB-${selectedJob?.id || ""}`}`}
+      >
+        {(() => {
+          const requestItems = toArray(selectedJob?.request_items);
+          const selectedSuppliers = toArray(selectedJob?.selected_suppliers);
+          const fallbackItems =
+            requestItems.length > 0
+              ? requestItems
+              : [
+                  {
+                    line_no: 1,
+                    item_type: selectedJob?.item_type,
+                    item_name: selectedJob?.item_name,
+                    item_description: selectedJob?.item_description,
+                    technical_specifications:
+                      selectedJob?.technical_specifications,
+                    quantity: selectedJob?.quantity,
+                    estimated_cost:
+                      selectedJob?.request_amount ||
+                      selectedJob?.display_amount,
+                    funding_source: selectedJob?.funding_source,
+                    department: selectedJob?.department,
+                    required_date: selectedJob?.required_date,
+                  },
+                ];
+
+          return (
+            <div className="job-details-screen">
+              <div className="job-details-grid">
+                <div className="job-details-block">
+                  <h3>Job Information</h3>
+                  <p>
+                    <strong>Job Number:</strong>{" "}
+                    {selectedJob?.job_number ||
+                      `JOB-${selectedJob?.id || "N/A"}`}
+                  </p>
+                  <p>
+                    <strong>Job ID:</strong> {selectedJob?.id || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Status:</strong> {selectedJob?.status || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Procurement Method:</strong>{" "}
+                    {getMethodLabel(selectedJob?.procurement_method)}
+                  </p>
+                  <p>
+                    <strong>Supplier Category:</strong>{" "}
+                    {selectedJob?.supplier_category || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Created At:</strong>{" "}
+                    {formatDateTime(selectedJob?.created_at)}
+                  </p>
+                  <p>
+                    <strong>Last Updated:</strong>{" "}
+                    {formatDateTime(selectedJob?.updated_at)}
+                  </p>
+                </div>
+
+                <div className="job-details-block">
+                  <h3>Request Information</h3>
+                  <p>
+                    <strong>Request ID:</strong>{" "}
+                    {selectedJob?.request_id ||
+                      selectedJob?.purchase_request_id ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <strong>Department:</strong>{" "}
+                    {selectedJob?.department || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Item Name:</strong>{" "}
+                    {selectedJob?.item_name || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Assigned Clerk:</strong>{" "}
+                    {selectedJob?.assigned_clerk_name || "Not assigned"}
+                  </p>
+                  <p>
+                    <strong>Total / Estimated Amount:</strong> $
+                    {formatAmount(
+                      selectedJob?.display_amount ||
+                        selectedJob?.total_amount ||
+                        selectedJob?.request_amount,
+                    )}
+                  </p>
+                  <p>
+                    <strong>Request Status:</strong>{" "}
+                    {selectedJob?.request_status || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Request Item Type:</strong>{" "}
+                    {selectedJob?.item_type || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Request Quantity:</strong>{" "}
+                    {selectedJob?.quantity ?? "N/A"}
+                  </p>
+                  <p>
+                    <strong>Funding Source:</strong>{" "}
+                    {selectedJob?.funding_source || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Required Date:</strong>{" "}
+                    {formatDate(selectedJob?.required_date)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Item Description</h3>
+                <div className="job-details-text">
+                  {selectedJob?.item_description ||
+                    selectedJob?.item_name ||
+                    "N/A"}
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Technical Specifications</h3>
+                <div className="job-details-text">
+                  {selectedJob?.technical_specifications || "N/A"}
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Checked Specifications</h3>
+                <div className="job-details-text">
+                  {selectedJob?.checked_specifications || "N/A"}
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Justification</h3>
+                <div className="job-details-text">
+                  {selectedJob?.justification || "N/A"}
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Products / Request Line Items</h3>
+                <div className="job-details-table-wrap">
+                  <table className="table job-details-table">
+                    <thead>
+                      <tr>
+                        <th>Line</th>
+                        <th>Type</th>
+                        <th>Item Name</th>
+                        <th>Description</th>
+                        <th>Technical Specs</th>
+                        <th>Qty</th>
+                        <th>Est. Cost</th>
+                        <th>Funding</th>
+                        <th>Department</th>
+                        <th>Required Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fallbackItems.map((item, index) => (
+                        <tr
+                          key={`${item?.id || item?.line_no || "line"}-${index}`}
+                        >
+                          <td>{item?.line_no ?? index + 1}</td>
+                          <td>{item?.item_type || "N/A"}</td>
+                          <td>{item?.item_name || "N/A"}</td>
+                          <td>{item?.item_description || "N/A"}</td>
+                          <td>{item?.technical_specifications || "N/A"}</td>
+                          <td>{item?.quantity ?? "N/A"}</td>
+                          <td>${formatAmount(item?.estimated_cost)}</td>
+                          <td>{item?.funding_source || "N/A"}</td>
+                          <td>{item?.department || "N/A"}</td>
+                          <td>{formatDate(item?.required_date)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="job-details-block">
+                <h3>Selected Suppliers</h3>
+                {selectedSuppliers.length === 0 ? (
+                  <p className="empty-note">
+                    No suppliers selected for this job yet.
+                  </p>
+                ) : (
+                  <div className="job-details-table-wrap">
+                    <table className="table job-details-table">
+                      <thead>
+                        <tr>
+                          <th>Supplier</th>
+                          <th>Email</th>
+                          <th>Category</th>
+                          <th>Quoted Price</th>
+                          <th>Quotation Received</th>
+                          <th>Submission Date</th>
+                          <th>Evaluation Result</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSuppliers.map((supplier, index) => (
+                          <tr key={`${supplier?.id || "supplier"}-${index}`}>
+                            <td>{supplier?.name || "N/A"}</td>
+                            <td>{supplier?.email || "N/A"}</td>
+                            <td>{supplier?.category || "N/A"}</td>
+                            <td>${formatAmount(supplier?.quoted_price)}</td>
+                            <td>
+                              {supplier?.quotation_received ? "Yes" : "No"}
+                            </td>
+                            <td>{formatDate(supplier?.submission_date)}</td>
+                            <td>{supplier?.evaluation_result || "N/A"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-actions">
+                <Button variant="secondary" onClick={closeModal}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       <Modal
         isOpen={isModalOpen && modalType === "start"}
