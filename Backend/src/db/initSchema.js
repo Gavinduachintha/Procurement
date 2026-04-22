@@ -186,6 +186,84 @@ const MANUAL_TEST_USERS = [
   },
 ];
 
+const SAMPLE_SUPPLIERS = [
+  {
+    name: "TechNova Solutions",
+    email: "quotes@technova.com",
+    category: "IT Equipment",
+  },
+  {
+    name: "ByteWave Lanka",
+    email: "sales@bytewave.lk",
+    category: "IT Equipment",
+  },
+  {
+    name: "Digital Horizon",
+    email: "bids@digitalhorizon.com",
+    category: "IT Equipment",
+  },
+  {
+    name: "PowerGrid Electricals",
+    email: "tenders@powergrid.lk",
+    category: "Electrical Equipment",
+  },
+  {
+    name: "VoltLine Engineering",
+    email: "quotes@voltline.com",
+    category: "Electrical Equipment",
+  },
+  {
+    name: "Electra Supplies",
+    email: "procurement@electra.lk",
+    category: "Electrical Equipment",
+  },
+  {
+    name: "LabCore Instruments",
+    email: "procurement@labcore.com",
+    category: "Laboratory Equipment",
+  },
+  {
+    name: "BioLab Systems",
+    email: "quotes@biolab.lk",
+    category: "Laboratory Equipment",
+  },
+  {
+    name: "Precision Labs Asia",
+    email: "bids@precisionlabs.asia",
+    category: "Laboratory Equipment",
+  },
+  {
+    name: "Prime Office Mart",
+    email: "bids@primeoffice.com",
+    category: "Furniture",
+  },
+  {
+    name: "Urban Furniture Co",
+    email: "sales@urbanfurniture.lk",
+    category: "Furniture",
+  },
+  {
+    name: "Campus Furnishings",
+    email: "quotes@campusfurnish.com",
+    category: "Furniture",
+  },
+  {
+    name: "OfficeLine Traders",
+    email: "tenders@officeline.lk",
+    category: "Office Equipment",
+  },
+  {
+    name: "StationPro Lanka",
+    email: "sales@stationpro.lk",
+    category: "Office Equipment",
+  },
+  {
+    name: "WorkHub Supplies",
+    email: "quotes@workhub.com",
+    category: "Office Equipment",
+  },
+];
+
 const ensureManualTestUsers = async () => {
   for (const manualUser of MANUAL_TEST_USERS) {
     const existing = await query("SELECT id FROM users WHERE email = $1", [
@@ -208,6 +286,24 @@ const ensureManualTestUsers = async () => {
         manualUser.role,
         manualUser.department,
       ],
+    );
+  }
+};
+
+const ensureSampleSuppliers = async () => {
+  for (const supplier of SAMPLE_SUPPLIERS) {
+    const existing = await query("SELECT id FROM suppliers WHERE email = $1", [
+      supplier.email.toLowerCase(),
+    ]);
+
+    if (existing.rowCount > 0) {
+      continue;
+    }
+
+    await query(
+      `INSERT INTO suppliers (name, email, category)
+       VALUES ($1, $2, $3)`,
+      [supplier.name, supplier.email.toLowerCase(), supplier.category],
     );
   }
 };
@@ -501,4 +597,5 @@ export const initializeSchema = async () => {
   `);
 
   await ensureManualTestUsers();
+  await ensureSampleSuppliers();
 };

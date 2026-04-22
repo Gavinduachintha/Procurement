@@ -15,7 +15,7 @@ router.get("/me", authenticate, authController.me);
 router.get(
   "/users",
   authenticate,
-  authorize("ADMIN"),
+  authorize("ADMIN", "SUPPLY_BRANCH"),
   authController.usersByRole,
 );
 router.post("/change-password", authenticate, authController.changePassword);

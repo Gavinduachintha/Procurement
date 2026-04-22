@@ -4,7 +4,6 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import Select from "../components/Select";
 import Input from "../components/Input";
-import TextArea from "../components/TextArea";
 import Alert from "../components/Alert";
 import Modal from "../components/Modal";
 import "./SupplyBranchDashboard.css";
@@ -27,22 +26,13 @@ const SUPPLIER_CATEGORIES = [
   { label: "Office Equipment", value: "Office Equipment" },
 ];
 
-const TEC_DECISIONS = [
-  "RECOMMENDED",
-  "REJECTED",
-  "RECALL",
-  "CALL_SAMPLE",
-  "NOT_QUOTED",
-];
-
-const COMMITTEE_DECISIONS = [
-  "APPROVED",
-  "REJECTED",
-  "CLARIFICATION_REQUESTED",
-  "RECOMMEND_AMENDMENT",
-];
-
 const parseData = (response) => response.data?.data || response.data;
+
+const getDefaultSubmissionDeadline = (daysAhead = 7) => {
+  const date = new Date();
+  date.setDate(date.getDate() + daysAhead);
+  return date.toISOString().slice(0, 10);
+};
 
 export default function SupplyBranchDashboard({ user }) {
   const [approvedRequests, setApprovedRequests] = useState([]);
@@ -59,27 +49,13 @@ export default function SupplyBranchDashboard({ user }) {
   const [supplierOptions, setSupplierOptions] = useState([]);
   const [selectedSuppliers, setSelectedSuppliers] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [submissionDeadline, setSubmissionDeadline] = useState(
+    getDefaultSubmissionDeadline(),
+  );
   const [selectedMethod, setSelectedMethod] = useState("");
   const [subjectClerks, setSubjectClerks] = useState([]);
   const [selectedClerkId, setSelectedClerkId] = useState("");
   const [clerkAssignHint, setClerkAssignHint] = useState("");
-
-  const [tecRows, setTecRows] = useState([]);
-  const [committeeReport, setCommitteeReport] = useState(null);
-  const [committeeDecision, setCommitteeDecision] = useState("");
-  const [committeeRemarks, setCommitteeRemarks] = useState("");
-
-  const [poDeliveryLocation, setPoDeliveryLocation] = useState("");
-  const [poPaymentTerms, setPoPaymentTerms] = useState("Within 30 days");
-  const [poDeliveryDeadline, setPoDeliveryDeadline] = useState("");
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-
-  const [reportQuarter, setReportQuarter] = useState("1");
-  const [reportYear, setReportYear] = useState(
-    String(new Date().getFullYear()),
-  );
-  const [quarterlyReport, setQuarterlyReport] = useState(null);
-  const [annualReport, setAnnualReport] = useState(null);
 
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -87,15 +63,6 @@ export default function SupplyBranchDashboard({ user }) {
     user?.role,
   );
   const canStartJobs = user?.role === "SUPPLY_BRANCH";
-  const canCommitteeDecide = ["MINOR_COMMITTEE", "MAJOR_COMMITTEE"].includes(
-    user?.role,
-  );
-  const canViewReports = [
-    "SUPPLY_BRANCH",
-    "MINOR_COMMITTEE",
-    "MAJOR_COMMITTEE",
-    "FINANCE_OFFICER",
-  ].includes(user?.role);
 
   useEffect(() => {
     console.log(
@@ -177,6 +144,7 @@ export default function SupplyBranchDashboard({ user }) {
     setSelectedCategory(job.supplier_category || "");
     setSupplierOptions([]);
     setSelectedSuppliers([]);
+    setSubmissionDeadline(getDefaultSubmissionDeadline());
     setIsModalOpen(true);
   };
 
@@ -315,6 +283,27 @@ export default function SupplyBranchDashboard({ user }) {
     }
   };
 
+  const handleSupplierCategoryChange = (event) => {
+    const nextCategory = event.target.value;
+    setSelectedCategory(nextCategory);
+    setSupplierOptions([]);
+    setSelectedSuppliers([]);
+  };
+
+  const syncCategoryAndGetSuppliers = async () => {
+    const response = await api.post(
+      `/procurement/jobs/${selectedJob.id}/select-category`,
+      {
+        category: selectedCategory,
+      },
+    );
+
+    const data = parseData(response);
+    const suppliers = Array.isArray(data) ? data : [];
+    setSupplierOptions(suppliers);
+    return suppliers;
+  };
+
   const toggleSupplier = (supplierId) => {
     setSelectedSuppliers((prev) =>
       prev.includes(supplierId)
@@ -326,13 +315,39 @@ export default function SupplyBranchDashboard({ user }) {
   const submitSuppliers = async () => {
     if (!selectedJob || !selectedSuppliers.length) return;
 
+    if (!selectedCategory) {
+      setError("Select supplier category before saving suppliers");
+      return;
+    }
+
     setActionLoading(true);
     setError("");
     setSuccess("");
 
     try {
+      const suppliersForCategory = await syncCategoryAndGetSuppliers();
+      const validIds = new Set(
+        suppliersForCategory.map((supplier) => supplier.id),
+      );
+      const normalizedSupplierIds = selectedSuppliers
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value));
+      const invalidSelection = normalizedSupplierIds.some(
+        (id) => !validIds.has(id),
+      );
+
+      if (invalidSelection) {
+        setSelectedSuppliers(
+          normalizedSupplierIds.filter((id) => validIds.has(id)),
+        );
+        setError(
+          "Supplier list changed for this category. Please reselect suppliers and try again.",
+        );
+        return;
+      }
+
       await api.post(`/procurement/${selectedJob.id}/suppliers`, {
-        supplierIds: selectedSuppliers,
+        supplierIds: normalizedSupplierIds,
       });
 
       setSuccess("Suppliers selected successfully.");
@@ -345,303 +360,89 @@ export default function SupplyBranchDashboard({ user }) {
     }
   };
 
-  const sendToTec = async (job) => {
+  const generateLettersPdf = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    if (!selectedCategory) {
+      setError("Select supplier category before generating letters");
+      return;
+    }
+
+    if (!selectedSuppliers.length) {
+      setError("Select at least one supplier before generating letters");
+      return;
+    }
+
+    if (!submissionDeadline) {
+      setError("Submission deadline is required");
+      return;
+    }
+
     setActionLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      await api.post(`/post-procurement/jobs/${job.id}/send-to-tec`);
-      setSuccess(`Job ${job.job_number} sent to TEC.`);
-      await loadData();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to send schedule to TEC");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openTecModal = async (job) => {
-    setSelectedJob(job);
-    setModalType("tec");
-    setTecRows([]);
-    setIsModalOpen(true);
-    setActionLoading(true);
-    setError("");
-
-    try {
-      const response = await api.get(`/procurement/jobs/${job.id}/schedule`);
-      const data = parseData(response);
-      const rows = Array.isArray(data?.rows) ? data.rows : [];
-
-      setTecRows(
-        rows.map((row) => ({
-          supplierId: row.supplierId,
-          supplierName: row.supplierName,
-          itemName: data?.itemName,
-          itemDescription: data?.description,
-          quantity: 1,
-          unitPrice: Number(row.quotedPrice || 0),
-          decisionStatus: "RECOMMENDED",
-          isRecommended: true,
-          remarks: "",
-        })),
+      const suppliersForCategory = await syncCategoryAndGetSuppliers();
+      const validIds = new Set(
+        suppliersForCategory.map((supplier) => supplier.id),
       );
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load supplier schedule",
+      const normalizedSupplierIds = selectedSuppliers
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value));
+      const invalidSelection = normalizedSupplierIds.some(
+        (id) => !validIds.has(id),
       );
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
-  const updateTecRow = (index, field, value) => {
-    setTecRows((prev) => {
-      const next = [...prev];
-      const row = { ...next[index], [field]: value };
-
-      if (field === "decisionStatus") {
-        row.isRecommended = value === "RECOMMENDED";
+      if (invalidSelection) {
+        setSelectedSuppliers(
+          normalizedSupplierIds.filter((id) => validIds.has(id)),
+        );
+        setError(
+          "Supplier list changed for this category. Please reselect suppliers and try again.",
+        );
+        return;
       }
 
-      next[index] = row;
-      return next;
-    });
-  };
-
-  const submitTecDecisions = async () => {
-    if (!selectedJob || !tecRows.length) return;
-
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(`/post-procurement/jobs/${selectedJob.id}/tec-decisions`, {
-        decisions: tecRows,
+      await api.post(`/procurement/${selectedJob.id}/suppliers`, {
+        supplierIds: normalizedSupplierIds,
       });
 
-      setSuccess("TEC decisions saved and committee report generated.");
+      const response = await api.post(
+        `/procurement/jobs/${selectedJob.id}/generate-letters-pdf`,
+        {
+          submissionDeadline,
+        },
+        {
+          responseType: "blob",
+        },
+      );
+
+      const disposition = response.headers["content-disposition"] || "";
+      const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+      const fileName =
+        match?.[1] ||
+        `quotation-requests-${selectedJob.job_number || selectedJob.id}.pdf`;
+
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+
+      setSuccess("Suppliers saved and quotation letter PDF generated.");
       setIsModalOpen(false);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save TEC decisions");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openCommitteeReport = async (job) => {
-    setSelectedJob(job);
-    setModalType("report");
-    setCommitteeReport(null);
-    setIsModalOpen(true);
-    setActionLoading(true);
-
-    try {
-      const response = await api.get(
-        `/post-procurement/jobs/${job.id}/committee-report`,
-      );
-      setCommitteeReport(parseData(response));
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load committee report",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const routeToCommittee = async (job) => {
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(`/post-procurement/jobs/${job.id}/route-committee`);
-      setSuccess(`Job ${job.job_number} routed to committee.`);
-      await loadData();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to route committee");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openCommitteeDecisionModal = (job) => {
-    setSelectedJob(job);
-    setCommitteeDecision("");
-    setCommitteeRemarks("");
-    setModalType("committee-decision");
-    setIsModalOpen(true);
-  };
-
-  const submitCommitteeDecision = async () => {
-    if (!selectedJob || !committeeDecision) return;
-
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(
-        `/post-procurement/jobs/${selectedJob.id}/committee-decision`,
-        {
-          decision: committeeDecision,
-          remarks: committeeRemarks,
-        },
-      );
-
-      setSuccess("Committee decision recorded.");
-      setIsModalOpen(false);
-      await loadData();
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to save committee decision",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openPurchaseOrderModal = (job) => {
-    setSelectedJob(job);
-    setPoDeliveryLocation("");
-    setPoPaymentTerms("Within 30 days");
-    setPoDeliveryDeadline("");
-    setModalType("generate-po");
-    setIsModalOpen(true);
-  };
-
-  const generatePurchaseOrders = async () => {
-    if (!selectedJob || !poDeliveryLocation) return;
-
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(
-        `/post-procurement/jobs/${selectedJob.id}/purchase-orders`,
-        {
-          deliveryLocation: poDeliveryLocation,
-          paymentTerms: poPaymentTerms,
-          deliveryDeadline: poDeliveryDeadline || undefined,
-        },
-      );
-
-      setSuccess("Purchase orders generated successfully.");
-      setIsModalOpen(false);
-      await loadData();
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to generate purchase orders",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const openPurchaseOrdersList = async (job) => {
-    setSelectedJob(job);
-    setPurchaseOrders([]);
-    setModalType("purchase-orders");
-    setIsModalOpen(true);
-    setActionLoading(true);
-
-    try {
-      const response = await api.get(
-        `/post-procurement/jobs/${job.id}/purchase-orders`,
-      );
-      const data = parseData(response);
-      setPurchaseOrders(Array.isArray(data) ? data : []);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load purchase orders");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const generateDeliveryNote = async (purchaseOrderId) => {
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(
-        `/post-procurement/purchase-orders/${purchaseOrderId}/delivery-note`,
-        {
-          remarks: "Generated from frontend workflow",
-        },
-      );
-      setSuccess("Delivery note generated.");
-      if (selectedJob) {
-        await openPurchaseOrdersList(selectedJob);
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to generate delivery note",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const generatePaymentVoucher = async (purchaseOrderId) => {
-    setActionLoading(true);
-    setError("");
-
-    try {
-      await api.post(
-        `/post-procurement/purchase-orders/${purchaseOrderId}/payment-voucher`,
-        {
-          invoiceReference: `INV-${Date.now()}`,
-        },
-      );
-      setSuccess("Payment voucher generated.");
-      if (selectedJob) {
-        await openPurchaseOrdersList(selectedJob);
-      }
-      await loadData();
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to generate payment voucher",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const loadQuarterlyReport = async () => {
-    setActionLoading(true);
-    setError("");
-
-    try {
-      const response = await api.get("/post-procurement/reports/quarterly", {
-        params: {
-          year: Number(reportYear),
-          quarter: Number(reportQuarter),
-        },
-      });
-      setQuarterlyReport(parseData(response));
-      setSuccess("Quarterly report loaded.");
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load quarterly report",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const loadAnnualReport = async () => {
-    setActionLoading(true);
-    setError("");
-
-    try {
-      const response = await api.get("/post-procurement/reports/annual", {
-        params: { year: Number(reportYear) },
-      });
-      setAnnualReport(parseData(response));
-      setSuccess("Annual report loaded.");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load annual report");
+      setError(err.response?.data?.message || "Failed to generate letters PDF");
     } finally {
       setActionLoading(false);
     }
@@ -652,18 +453,7 @@ export default function SupplyBranchDashboard({ user }) {
       JOB_CREATED: "badge-info",
       CLERK_ASSIGNED: "badge-info",
       CATEGORY_SELECTED: "badge-warning",
-      PENDING_TEC_DECISION: "badge-warning",
-      TEC_DECISION_ENTERED: "badge-info",
-      PENDING_MINOR_COMMITTEE_APPROVAL: "badge-warning",
-      PENDING_MAJOR_COMMITTEE_APPROVAL: "badge-warning",
-      COMMITTEE_APPROVED: "badge-success",
-      COMMITTEE_REJECTED: "badge-danger",
-      COMMITTEE_CLARIFICATION_REQUESTED: "badge-warning",
-      COMMITTEE_AMENDMENT_REQUESTED: "badge-warning",
-      PURCHASE_ORDER_GENERATED: "badge-info",
-      DELIVERED: "badge-info",
-      ACCEPTED: "badge-success",
-      PAYMENT_VOUCHER_GENERATED: "badge-success",
+      QUOTATION_REQUESTS_GENERATED: "badge-success",
     };
 
     return map[status] || "badge-info";
@@ -681,7 +471,7 @@ export default function SupplyBranchDashboard({ user }) {
     <div className="supply-branch">
       <div className="page-header">
         <h1>Procurement Workflow Dashboard</h1>
-        <p>Stage 1 + Stage 2 workflow actions and reporting</p>
+        <p>Stage 1 workflow actions</p>
       </div>
 
       <div className="action-buttons mb-2">
@@ -787,73 +577,6 @@ export default function SupplyBranchDashboard({ user }) {
                           Suppliers
                         </Button>
                       )}
-
-                      {canManageWorkflow && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => sendToTec(job)}
-                          disabled={actionLoading}
-                        >
-                          Send TEC
-                        </Button>
-                      )}
-
-                      {canManageWorkflow && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => openTecModal(job)}
-                        >
-                          TEC Entry
-                        </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openCommitteeReport(job)}
-                      >
-                        Report
-                      </Button>
-
-                      {canManageWorkflow && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => routeToCommittee(job)}
-                        >
-                          Route Committee
-                        </Button>
-                      )}
-
-                      {canCommitteeDecide && (
-                        <Button
-                          size="sm"
-                          variant="success"
-                          onClick={() => openCommitteeDecisionModal(job)}
-                        >
-                          Committee Decision
-                        </Button>
-                      )}
-
-                      {canStartJobs && (
-                        <Button
-                          size="sm"
-                          variant="success"
-                          onClick={() => openPurchaseOrderModal(job)}
-                        >
-                          Generate PO
-                        </Button>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openPurchaseOrdersList(job)}
-                      >
-                        Purchase Orders
-                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -862,61 +585,6 @@ export default function SupplyBranchDashboard({ user }) {
           </table>
         )}
       </Card>
-
-      {canViewReports && (
-        <Card>
-          <h2 className="section-title">Quarterly / Annual Reports</h2>
-
-          <div className="report-filters">
-            <Input
-              label="Year"
-              type="number"
-              min="2000"
-              value={reportYear}
-              onChange={(e) => setReportYear(e.target.value)}
-            />
-
-            <Select
-              label="Quarter"
-              value={reportQuarter}
-              onChange={(e) => setReportQuarter(e.target.value)}
-              options={[
-                { label: "Q1", value: "1" },
-                { label: "Q2", value: "2" },
-                { label: "Q3", value: "3" },
-                { label: "Q4", value: "4" },
-              ]}
-            />
-          </div>
-
-          <div className="action-buttons">
-            <Button onClick={loadQuarterlyReport} disabled={actionLoading}>
-              Load Quarterly Report
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={loadAnnualReport}
-              disabled={actionLoading}
-            >
-              Load Annual Report
-            </Button>
-          </div>
-
-          {quarterlyReport && (
-            <div className="report-block">
-              <h3>Quarterly Report Result</h3>
-              <pre>{JSON.stringify(quarterlyReport, null, 2)}</pre>
-            </div>
-          )}
-
-          {annualReport && (
-            <div className="report-block">
-              <h3>Annual Report Result</h3>
-              <pre>{JSON.stringify(annualReport, null, 2)}</pre>
-            </div>
-          )}
-        </Card>
-      )}
 
       <Modal
         isOpen={isModalOpen && modalType === "start"}
@@ -993,7 +661,7 @@ export default function SupplyBranchDashboard({ user }) {
           label="Supplier Category"
           options={SUPPLIER_CATEGORIES}
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
+          onChange={handleSupplierCategoryChange}
         />
 
         <div className="action-buttons">
@@ -1023,6 +691,13 @@ export default function SupplyBranchDashboard({ user }) {
           </div>
         )}
 
+        <Input
+          label="Quotation Submission Deadline *"
+          type="date"
+          value={submissionDeadline}
+          onChange={(e) => setSubmissionDeadline(e.target.value)}
+        />
+
         <div className="modal-actions">
           <Button
             onClick={submitSuppliers}
@@ -1030,240 +705,22 @@ export default function SupplyBranchDashboard({ user }) {
           >
             {actionLoading ? "Saving..." : "Save Suppliers"}
           </Button>
-          <Button variant="secondary" onClick={closeModal}>
-            Close
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isModalOpen && modalType === "tec"}
-        onClose={closeModal}
-        title="TEC Decision Entry"
-      >
-        {tecRows.length === 0 ? (
-          <p>No suppliers found for this job schedule.</p>
-        ) : (
-          <div className="tec-list">
-            {tecRows.map((row, index) => (
-              <div key={row.supplierId} className="tec-row">
-                <h4>{row.supplierName}</h4>
-                <Select
-                  label="Decision"
-                  value={row.decisionStatus}
-                  onChange={(e) =>
-                    updateTecRow(index, "decisionStatus", e.target.value)
-                  }
-                  options={TEC_DECISIONS.map((value) => ({
-                    label: value,
-                    value,
-                  }))}
-                />
-                <Input
-                  label="Quantity"
-                  type="number"
-                  min="1"
-                  value={row.quantity}
-                  onChange={(e) =>
-                    updateTecRow(index, "quantity", e.target.value)
-                  }
-                />
-                <Input
-                  label="Unit Price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.unitPrice}
-                  onChange={(e) =>
-                    updateTecRow(index, "unitPrice", e.target.value)
-                  }
-                />
-                <TextArea
-                  label="Remarks"
-                  value={row.remarks}
-                  onChange={(e) =>
-                    updateTecRow(index, "remarks", e.target.value)
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="modal-actions">
           <Button
-            onClick={submitTecDecisions}
-            disabled={tecRows.length === 0 || actionLoading}
+            variant="success"
+            onClick={generateLettersPdf}
+            disabled={
+              !selectedCategory ||
+              selectedSuppliers.length === 0 ||
+              !submissionDeadline ||
+              actionLoading
+            }
           >
-            {actionLoading ? "Saving..." : "Save TEC Decisions"}
+            {actionLoading ? "Generating..." : "Generate Letters PDF"}
           </Button>
           <Button variant="secondary" onClick={closeModal}>
             Close
           </Button>
         </div>
-      </Modal>
-
-      <Modal
-        isOpen={isModalOpen && modalType === "report"}
-        onClose={closeModal}
-        title="Committee Report"
-      >
-        {actionLoading ? (
-          <p>Loading report...</p>
-        ) : committeeReport ? (
-          <pre className="report-json">
-            {JSON.stringify(committeeReport, null, 2)}
-          </pre>
-        ) : (
-          <p>No report available.</p>
-        )}
-      </Modal>
-
-      <Modal
-        isOpen={isModalOpen && modalType === "committee-decision"}
-        onClose={closeModal}
-        title="Committee Decision"
-      >
-        <Select
-          label="Decision"
-          value={committeeDecision}
-          onChange={(e) => setCommitteeDecision(e.target.value)}
-          options={COMMITTEE_DECISIONS.map((value) => ({
-            label: value,
-            value,
-          }))}
-        />
-
-        <TextArea
-          label="Remarks"
-          value={committeeRemarks}
-          onChange={(e) => setCommitteeRemarks(e.target.value)}
-          placeholder="Optional committee remarks"
-        />
-
-        <div className="modal-actions">
-          <Button
-            onClick={submitCommitteeDecision}
-            disabled={!committeeDecision || actionLoading}
-          >
-            {actionLoading ? "Saving..." : "Save Decision"}
-          </Button>
-          <Button variant="secondary" onClick={closeModal}>
-            Cancel
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isModalOpen && modalType === "generate-po"}
-        onClose={closeModal}
-        title="Generate Purchase Orders"
-      >
-        <Input
-          label="Delivery Location"
-          value={poDeliveryLocation}
-          onChange={(e) => setPoDeliveryLocation(e.target.value)}
-          placeholder="Delivery location / service location"
-          required
-        />
-
-        <Input
-          label="Delivery Deadline"
-          type="date"
-          value={poDeliveryDeadline}
-          onChange={(e) => setPoDeliveryDeadline(e.target.value)}
-        />
-
-        <Input
-          label="Payment Terms"
-          value={poPaymentTerms}
-          onChange={(e) => setPoPaymentTerms(e.target.value)}
-        />
-
-        <div className="modal-actions">
-          <Button
-            onClick={generatePurchaseOrders}
-            disabled={!poDeliveryLocation || actionLoading}
-          >
-            {actionLoading ? "Generating..." : "Generate POs"}
-          </Button>
-          <Button variant="secondary" onClick={closeModal}>
-            Cancel
-          </Button>
-        </div>
-      </Modal>
-
-      <Modal
-        isOpen={isModalOpen && modalType === "purchase-orders"}
-        onClose={closeModal}
-        title={`Purchase Orders (${selectedJob?.job_number || ""})`}
-      >
-        {actionLoading ? (
-          <p>Loading purchase orders...</p>
-        ) : purchaseOrders.length === 0 ? (
-          <p>No purchase orders found for this job.</p>
-        ) : (
-          <div className="po-list">
-            {purchaseOrders.map((po) => (
-              <Card key={po.id}>
-                <div className="po-row">
-                  <div>
-                    <strong>{po.po_number}</strong>
-                    <div>{po.supplier_name}</div>
-                    <div>Amount: ${po.total_amount}</div>
-                    <div>
-                      Delivery Confirmed: {po.confirmed_at ? "Yes" : "Pending"}
-                    </div>
-                    <div>
-                      Delivery Note:{" "}
-                      {po.delivery_note_number || "Not generated"}
-                    </div>
-                    <div>
-                      Payment Voucher:{" "}
-                      {po.payment_voucher_number || "Not generated"}
-                    </div>
-                    <div>
-                      Delivery Link:{" "}
-                      <a
-                        href={`/delivery/confirm/${po.confirmation_token}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        /delivery/confirm/{po.confirmation_token}
-                      </a>
-                    </div>
-                  </div>
-                  <div className="action-buttons">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => generateDeliveryNote(po.id)}
-                      disabled={
-                        actionLoading ||
-                        !po.confirmed_at ||
-                        !!po.delivery_note_number
-                      }
-                    >
-                      Delivery Note
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => generatePaymentVoucher(po.id)}
-                      disabled={
-                        actionLoading ||
-                        !po.confirmed_at ||
-                        !po.delivery_note_number ||
-                        !!po.payment_voucher_number
-                      }
-                    >
-                      Payment Voucher
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
       </Modal>
     </div>
   );

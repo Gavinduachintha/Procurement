@@ -13,7 +13,6 @@ import SpecificationReview from "./pages/SpecificationReview";
 import ApprovalDashboard from "./pages/ApprovalDashboard";
 import SupplyBranchDashboard from "./pages/SupplyBranchDashboard";
 import RequestDetails from "./pages/RequestDetails";
-import DeliveryConfirmation from "./pages/DeliveryConfirmation";
 import AdminUserRegistration from "./pages/AdminUserRegistration";
 import ChangePassword from "./pages/ChangePassword";
 import "./App.css";
@@ -55,10 +54,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route
-          path="/delivery/confirm/:token"
-          element={<DeliveryConfirmation />}
-        />
         <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />
 

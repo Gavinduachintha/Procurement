@@ -26,6 +26,15 @@ export const authController = {
         .json({ message: "Query param 'role' is required" });
     }
 
+    if (
+      req.user?.role === "SUPPLY_BRANCH" &&
+      role.toUpperCase() !== "SUBJECT_CLERK"
+    ) {
+      return res.status(403).json({
+        message: "Supply Branch can only query subject clerks",
+      });
+    }
+
     const users = await userRepository.findByRole(role);
     res.json(users);
   }),
