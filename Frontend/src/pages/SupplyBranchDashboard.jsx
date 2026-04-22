@@ -51,6 +51,15 @@ const formatAmount = (value) => {
   return amount.toFixed(2);
 };
 
+const lkrFormatter = new Intl.NumberFormat("en-LK", {
+  style: "currency",
+  currency: "LKR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const formatCurrency = (value) => lkrFormatter.format(Number(formatAmount(value)));
+
 const formatDateTime = (value) => {
   if (!value) {
     return "N/A";
@@ -84,6 +93,13 @@ const toArray = (value) => {
 
   return [];
 };
+
+const getSafeFilePart = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "supplier";
 
 const getMethodLabel = (methodCode) => {
   if (!methodCode) {
@@ -508,11 +524,49 @@ export default function SupplyBranchDashboard({ user }) {
       );
 
       const letters = parseData(lettersResponse) || {};
-      const recipients = Array.isArray(letters.recipients)
+      const selectedSupplierIdSet = new Set(normalizedSupplierIds);
+      const suppliersById = new Map(
+        suppliersForCategory
+          .map((supplier) => [normalizeId(supplier.id), supplier])
+          .filter(([id]) => id !== null),
+      );
+
+      const backendRecipients = Array.isArray(letters.recipients)
         ? letters.recipients
-        : suppliersForCategory.filter((supplier) =>
-            normalizedSupplierIds.includes(normalizeId(supplier.id)),
+        : [];
+
+      const recipientsFromBackend = backendRecipients
+        .map((recipient) => {
+          const recipientId = normalizeId(
+            recipient?.id ?? recipient?.supplier_id ?? recipient?.supplierId,
           );
+
+          if (recipientId === null || !selectedSupplierIdSet.has(recipientId)) {
+            return null;
+          }
+
+          const categorySupplier = suppliersById.get(recipientId) || {};
+          return {
+            ...categorySupplier,
+            ...recipient,
+            id: recipientId,
+          };
+        })
+        .filter(Boolean);
+
+      const recipientsFromSelectedCategory = suppliersForCategory.filter((supplier) =>
+        selectedSupplierIdSet.has(normalizeId(supplier.id)),
+      );
+
+      const recipients =
+        recipientsFromBackend.length > 0
+          ? recipientsFromBackend
+          : recipientsFromSelectedCategory;
+
+      if (recipients.length === 0) {
+        setError("No valid selected suppliers found for letter generation.");
+        return;
+      }
 
       const methodLabel = getMethodLabel(selectedJob.procurement_method);
       const jobNumberWithMethod = `${selectedJob.job_number || selectedJob.id} (${methodLabel})`;
@@ -524,36 +578,44 @@ export default function SupplyBranchDashboard({ user }) {
         .filter(Boolean)
         .join(" | ");
 
-      const blob = await pdf(
-        <QuotationRequestLetter
-          suppliers={recipients}
-          logoSrc={universityLogo}
-          universityName="WAYAMBA UNIVERSITY OF SRI LANKA"
-          location="Kuliyapitiya."
-          letterTitle="PURCHASE ORDER FOR STORES & SERVICES"
-          jobNumberWithMethod={jobNumberWithMethod}
-          itemDescription={
-            selectedJob.item_description || selectedJob.item_name || "N/A"
-          }
-          technicalSpecifications={
-            selectedJob.technical_specifications || "N/A"
-          }
-          deadline={submissionDeadline}
-          contactInformation={contactInformation}
-        />,
-      ).toBlob();
+      for (const recipient of recipients) {
+        const blob = await pdf(
+          <QuotationRequestLetter
+            supplier={recipient}
+            logoSrc={universityLogo}
+            universityName="WAYAMBA UNIVERSITY OF SRI LANKA"
+            location="Kuliyapitiya."
+            letterTitle="PURCHASE ORDER FOR STORES & SERVICES"
+            jobNumberWithMethod={jobNumberWithMethod}
+            itemDescription={
+              selectedJob.item_description || selectedJob.item_name || "N/A"
+            }
+            technicalSpecifications={
+              selectedJob.technical_specifications || "N/A"
+            }
+            deadline={submissionDeadline}
+            contactInformation={contactInformation}
+          />,
+        ).toBlob();
 
-      const fileName = `po-letter-${selectedJob.job_number || selectedJob.id}.pdf`;
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
+        const supplierFilePart = getSafeFilePart(
+          recipient?.name || recipient?.email || recipient?.id,
+        );
+        const fileName = `po-letter-${selectedJob.job_number || selectedJob.id}-${supplierFilePart}.pdf`;
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(blobUrl);
 
-      setSuccess("PO letter downloaded successfully.");
+        // Small delay helps browsers process multiple download triggers.
+        await new Promise((resolve) => setTimeout(resolve, 120));
+      }
+
+      setSuccess(`PO letters downloaded for ${recipients.length} supplier(s).`);
       setIsModalOpen(false);
       await loadData();
     } catch (err) {
@@ -623,7 +685,7 @@ export default function SupplyBranchDashboard({ user }) {
                     <td>{request.request_id || request.id}</td>
                     <td>{request.item_name}</td>
                     <td>{request.department}</td>
-                    <td>${request.estimated_cost}</td>
+                    <td>{formatCurrency(request.estimated_cost)}</td>
                     <td>
                       <Button
                         size="sm"
@@ -671,8 +733,7 @@ export default function SupplyBranchDashboard({ user }) {
                   </td>
                   <td>{job.assigned_clerk_name || "Not assigned"}</td>
                   <td>
-                    $
-                    {formatAmount(
+                    {formatCurrency(
                       job.display_amount ||
                         job.total_amount ||
                         job.request_amount,
@@ -800,8 +861,8 @@ export default function SupplyBranchDashboard({ user }) {
                     {selectedJob?.assigned_clerk_name || "Not assigned"}
                   </p>
                   <p>
-                    <strong>Total / Estimated Amount:</strong> $
-                    {formatAmount(
+                    <strong>Total / Estimated Amount:</strong>{" "}
+                    {formatCurrency(
                       selectedJob?.display_amount ||
                         selectedJob?.total_amount ||
                         selectedJob?.request_amount,
@@ -889,7 +950,7 @@ export default function SupplyBranchDashboard({ user }) {
                           <td>{item?.item_description || "N/A"}</td>
                           <td>{item?.technical_specifications || "N/A"}</td>
                           <td>{item?.quantity ?? "N/A"}</td>
-                          <td>${formatAmount(item?.estimated_cost)}</td>
+                          <td>{formatCurrency(item?.estimated_cost)}</td>
                           <td>{item?.funding_source || "N/A"}</td>
                           <td>{item?.department || "N/A"}</td>
                           <td>{formatDate(item?.required_date)}</td>
@@ -926,7 +987,7 @@ export default function SupplyBranchDashboard({ user }) {
                             <td>{supplier?.name || "N/A"}</td>
                             <td>{supplier?.email || "N/A"}</td>
                             <td>{supplier?.category || "N/A"}</td>
-                            <td>${formatAmount(supplier?.quoted_price)}</td>
+                            <td>{formatCurrency(supplier?.quoted_price)}</td>
                             <td>
                               {supplier?.quotation_received ? "Yes" : "No"}
                             </td>
