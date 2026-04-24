@@ -112,12 +112,16 @@ export function TecReportPdf({ job, rows, generatedBy, generatedAt }) {
               <Text style={[styles.cell, { width: "13%" }]}>Unit Price</Text>
               <Text style={[styles.cell, { width: "14%" }]}>Decision</Text>
               <Text style={[styles.cell, { width: "6%" }]}>Rec.</Text>
-              <Text style={[styles.cell, styles.cellLast, { width: "20%" }]}>Remarks</Text>
+              <Text style={[styles.cell, styles.cellLast, { width: "20%" }]}>
+                Remarks
+              </Text>
             </View>
 
             {list.length === 0 ? (
               <View style={styles.tableRow}>
-                <Text style={[styles.cell, styles.cellLast, { width: "100%" }]}>No TEC entries available.</Text>
+                <Text style={[styles.cell, styles.cellLast, { width: "100%" }]}>
+                  No TEC entries available.
+                </Text>
               </View>
             ) : (
               list.map((row, index) => (
@@ -125,13 +129,29 @@ export function TecReportPdf({ job, rows, generatedBy, generatedAt }) {
                   key={`${row?.supplierId || row?.supplier_id || "supplier"}-${index}`}
                   style={[styles.tableRow, styles.rowBorder]}
                 >
-                  <Text style={[styles.cell, { width: "20%" }]}>{safeText(row?.supplierName || row?.supplier_name)}</Text>
-                  <Text style={[styles.cell, { width: "20%" }]}>{safeText(row?.itemName || row?.item_name)}</Text>
-                  <Text style={[styles.cell, { width: "7%" }]}>{safeText(row?.quantity)}</Text>
-                  <Text style={[styles.cell, { width: "13%" }]}>{formatCurrency(row?.unitPrice ?? row?.unit_price)}</Text>
-                  <Text style={[styles.cell, { width: "14%" }]}>{safeText(row?.decisionStatus || row?.decision_status)}</Text>
-                  <Text style={[styles.cell, { width: "6%" }]}>{row?.isRecommended || row?.is_recommended ? "Yes" : "No"}</Text>
-                  <Text style={[styles.cell, styles.cellLast, { width: "20%" }]}>{safeText(row?.remarks)}</Text>
+                  <Text style={[styles.cell, { width: "20%" }]}>
+                    {safeText(row?.supplierName || row?.supplier_name)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "20%" }]}>
+                    {safeText(row?.itemName || row?.item_name)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "7%" }]}>
+                    {safeText(row?.quantity)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "13%" }]}>
+                    {formatCurrency(row?.unitPrice ?? row?.unit_price)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "14%" }]}>
+                    {safeText(row?.decisionStatus || row?.decision_status)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "6%" }]}>
+                    {row?.isRecommended || row?.is_recommended ? "Yes" : "No"}
+                  </Text>
+                  <Text
+                    style={[styles.cell, styles.cellLast, { width: "20%" }]}
+                  >
+                    {safeText(row?.remarks)}
+                  </Text>
                 </View>
               ))
             )}
@@ -181,12 +201,16 @@ export function CommitteeReportPdf({ job, report, generatedBy, generatedAt }) {
             <View style={[styles.tableRow, styles.tableHeader]}>
               <Text style={[styles.cell, { width: "35%" }]}>Supplier</Text>
               <Text style={[styles.cell, { width: "20%" }]}>Items</Text>
-              <Text style={[styles.cell, styles.cellLast, { width: "45%" }]}>Total Amount</Text>
+              <Text style={[styles.cell, styles.cellLast, { width: "45%" }]}>
+                Total Amount
+              </Text>
             </View>
 
             {suppliers.length === 0 ? (
               <View style={styles.tableRow}>
-                <Text style={[styles.cell, styles.cellLast, { width: "100%" }]}>No committee summary available.</Text>
+                <Text style={[styles.cell, styles.cellLast, { width: "100%" }]}>
+                  No committee summary available.
+                </Text>
               </View>
             ) : (
               suppliers.map((supplier, index) => (
@@ -194,9 +218,21 @@ export function CommitteeReportPdf({ job, report, generatedBy, generatedAt }) {
                   key={`${supplier?.supplierId || "supplier"}-${index}`}
                   style={[styles.tableRow, styles.rowBorder]}
                 >
-                  <Text style={[styles.cell, { width: "35%" }]}>{safeText(supplier?.supplierName)}</Text>
-                  <Text style={[styles.cell, { width: "20%" }]}>{safeText(Array.isArray(supplier?.items) ? supplier.items.length : 0)}</Text>
-                  <Text style={[styles.cell, styles.cellLast, { width: "45%" }]}>{formatCurrency(supplier?.totalAmount)}</Text>
+                  <Text style={[styles.cell, { width: "35%" }]}>
+                    {safeText(supplier?.supplierName)}
+                  </Text>
+                  <Text style={[styles.cell, { width: "20%" }]}>
+                    {safeText(
+                      Array.isArray(supplier?.items)
+                        ? supplier.items.length
+                        : 0,
+                    )}
+                  </Text>
+                  <Text
+                    style={[styles.cell, styles.cellLast, { width: "45%" }]}
+                  >
+                    {formatCurrency(supplier?.totalAmount)}
+                  </Text>
                 </View>
               ))
             )}
