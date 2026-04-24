@@ -33,6 +33,7 @@ export default function Dashboard({ user }) {
         [
           "SUPPLY_BRANCH",
           "SUBJECT_CLERK",
+          "TEC_MEMBER",
           "MINOR_COMMITTEE",
           "MAJOR_COMMITTEE",
           "FINANCE_OFFICER",

@@ -29,6 +29,14 @@ const SUPPLIER_CATEGORIES = [
   { label: "Office Equipment", value: "Office Equipment" },
 ];
 
+const TEC_DECISION_OPTIONS = [
+  { label: "Recommended", value: "RECOMMENDED" },
+  { label: "Rejected", value: "REJECTED" },
+  { label: "Recall", value: "RECALL" },
+  { label: "Call Sample", value: "CALL_SAMPLE" },
+  { label: "Not Quoted", value: "NOT_QUOTED" },
+];
+
 const parseData = (response) => response.data?.data || response.data;
 
 const getDefaultSubmissionDeadline = (daysAhead = 7) => {
@@ -112,6 +120,26 @@ const toArray = (value) => {
   return [];
 };
 
+const parseJsonData = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "object") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+};
+
 const getSafeFilePart = (value) =>
   String(value || "")
     .trim()
@@ -158,12 +186,22 @@ export default function SupplyBranchDashboard({ user }) {
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleFreezeLoading, setScheduleFreezeLoading] = useState(false);
   const [savingSupplierId, setSavingSupplierId] = useState(null);
+  const [tecRows, setTecRows] = useState([]);
+  const [tecLoading, setTecLoading] = useState(false);
+  const [tecSaving, setTecSaving] = useState(false);
+  const [sendToTecLoading, setSendToTecLoading] = useState(false);
+  const [committeeReport, setCommitteeReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   const [actionLoading, setActionLoading] = useState(false);
 
-  const canManageWorkflow = ["SUPPLY_BRANCH", "SUBJECT_CLERK"].includes(
+  const canSupplyOrClerk = ["SUPPLY_BRANCH", "SUBJECT_CLERK"].includes(
     user?.role,
   );
+  const canEditTecRecommendations = user?.role === "TEC_MEMBER";
+  const canManageWorkflow = canSupplyOrClerk;
+  const canTecWorkflow = canSupplyOrClerk || canEditTecRecommendations;
   const canStartJobs = user?.role === "SUPPLY_BRANCH";
 
   useEffect(() => {
@@ -377,6 +415,315 @@ export default function SupplyBranchDashboard({ user }) {
       setError(err.response?.data?.message || "Failed to load schedule");
     } finally {
       setScheduleLoading(false);
+    }
+  };
+
+  const buildDefaultTecRows = (job) => {
+    const suppliers = toArray(job?.selected_suppliers);
+
+    return suppliers
+      .map((supplier, index) => {
+        const supplierId = normalizeId(supplier?.id || supplier?.supplier_id);
+        if (supplierId === null) {
+          return null;
+        }
+
+        return {
+          rowKey: `${supplierId}-${index}`,
+          supplierId,
+          supplierName: supplier?.name || `Supplier ${supplierId}`,
+          itemName: job?.item_name || "",
+          itemDescription: job?.item_description || "",
+          quantity: Number(job?.quantity) > 0 ? Number(job.quantity) : 1,
+          unitPrice:
+            supplier?.quoted_price === null ||
+            supplier?.quoted_price === undefined
+              ? ""
+              : String(supplier.quoted_price),
+          decisionStatus: "RECOMMENDED",
+          isRecommended: true,
+          remarks: "",
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const mapApiTecRow = (row, index) => ({
+    rowKey: `${row?.id || row?.supplier_id || row?.supplierId || "tec"}-${index}`,
+    supplierId: normalizeId(row?.supplier_id ?? row?.supplierId),
+    supplierName: row?.supplier_name || row?.supplierName || "Supplier",
+    itemName: row?.item_name || row?.itemName || "",
+    itemDescription: row?.item_description || row?.itemDescription || "",
+    quantity: Number(row?.quantity) > 0 ? Number(row.quantity) : 1,
+    unitPrice:
+      row?.unit_price === null || row?.unit_price === undefined
+        ? ""
+        : String(row.unit_price),
+    decisionStatus: String(
+      row?.decision_status || row?.decisionStatus || "RECOMMENDED",
+    ).toUpperCase(),
+    isRecommended:
+      typeof row?.is_recommended === "boolean"
+        ? row.is_recommended
+        : row?.decision_status === "RECOMMENDED",
+    remarks: row?.remarks || "",
+  });
+
+  const openTecModal = async (job) => {
+    setSelectedJob(job);
+    setModalType("tec");
+    setTecRows([]);
+    setCommitteeReport(null);
+    setIsModalOpen(true);
+    setTecLoading(true);
+    setError("");
+
+    try {
+      const response = await api.get(
+        `/procurement/jobs/${job.id}/tec-recommendations`,
+      );
+      const data = parseData(response);
+      const rows =
+        Array.isArray(data) && data.length
+          ? data.map(mapApiTecRow)
+          : buildDefaultTecRows(job);
+
+      setTecRows(rows);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load TEC decisions");
+      setTecRows(buildDefaultTecRows(job));
+    } finally {
+      setTecLoading(false);
+    }
+  };
+
+  const handleTecFieldChange = (rowKey, field, value) => {
+    setTecRows((prev) =>
+      prev.map((row) => {
+        if (row.rowKey !== rowKey) {
+          return row;
+        }
+
+        if (field === "decisionStatus") {
+          return {
+            ...row,
+            decisionStatus: value,
+            isRecommended: value === "RECOMMENDED",
+          };
+        }
+
+        if (field === "isRecommended") {
+          return {
+            ...row,
+            isRecommended: Boolean(value),
+            decisionStatus: value ? "RECOMMENDED" : row.decisionStatus,
+          };
+        }
+
+        return {
+          ...row,
+          [field]: value,
+        };
+      }),
+    );
+  };
+
+  const sendScheduleToTec = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    if (!canSupplyOrClerk) {
+      setError("Only subject clerk or supply branch can send schedule to TEC");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setSendToTecLoading(true);
+
+    try {
+      await api.post(`/procurement/jobs/${selectedJob.id}/send-to-tec`);
+      setSuccess("Schedule sent to TEC successfully.");
+      await loadData();
+      setSelectedJob((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "PENDING_TEC_DECISION",
+            }
+          : prev,
+      );
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to send schedule to TEC");
+    } finally {
+      setSendToTecLoading(false);
+    }
+  };
+
+  const saveTecRecommendations = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    if (!canEditTecRecommendations) {
+      setError("Only TEC members can save TEC recommendations");
+      return;
+    }
+
+    if (!tecRows.length) {
+      setError("Add at least one TEC recommendation row");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setTecSaving(true);
+
+    try {
+      const entries = tecRows.map((row, index) => {
+        const quantity = Number(row.quantity);
+        const unitPrice =
+          row.unitPrice === "" || row.unitPrice === null
+            ? 0
+            : Number(row.unitPrice);
+
+        if (!row.supplierId) {
+          throw new Error(`Row ${index + 1}: supplier is required`);
+        }
+
+        if (!row.itemName?.trim()) {
+          throw new Error(`Row ${index + 1}: item name is required`);
+        }
+
+        if (!Number.isFinite(quantity) || quantity <= 0) {
+          throw new Error(`Row ${index + 1}: quantity must be greater than 0`);
+        }
+
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw new Error(`Row ${index + 1}: unit price must be 0 or greater`);
+        }
+
+        return {
+          supplierId: row.supplierId,
+          itemName: row.itemName.trim(),
+          itemDescription: row.itemDescription || null,
+          quantity,
+          unitPrice,
+          decisionStatus: row.decisionStatus,
+          isRecommended: Boolean(row.isRecommended),
+          remarks: row.remarks || null,
+        };
+      });
+
+      const response = await api.post(
+        `/procurement/jobs/${selectedJob.id}/tec-recommendations`,
+        { entries },
+      );
+      const data = parseData(response) || {};
+      const savedRows = Array.isArray(data.entries) ? data.entries : [];
+
+      setTecRows(savedRows.length ? savedRows.map(mapApiTecRow) : tecRows);
+
+      setSelectedJob((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "TEC_DECISION_ENTERED",
+            }
+          : prev,
+      );
+      setSuccess("TEC decisions saved successfully.");
+      await loadData();
+    } catch (err) {
+      setError(
+        err.message ||
+          err.response?.data?.message ||
+          "Failed to save TEC decisions",
+      );
+    } finally {
+      setTecSaving(false);
+    }
+  };
+
+  const generateCommitteeReport = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    if (!canSupplyOrClerk) {
+      setError(
+        "Only subject clerk or supply branch can generate committee report",
+      );
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setReportLoading(true);
+
+    try {
+      const response = await api.post(
+        `/procurement/jobs/${selectedJob.id}/committee-report/generate`,
+      );
+      const report = parseData(response) || null;
+      const parsedData = parseJsonData(report?.report_data);
+
+      setCommitteeReport(
+        report
+          ? {
+              ...report,
+              reportData: parsedData,
+            }
+          : null,
+      );
+      setSuccess("Committee report generated successfully.");
+      await loadData();
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to generate committee report",
+      );
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const routeToCommittee = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    if (!canSupplyOrClerk) {
+      setError("Only subject clerk or supply branch can route to committee");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setRouteLoading(true);
+
+    try {
+      const response = await api.post(
+        `/procurement/jobs/${selectedJob.id}/committee-route`,
+      );
+      const routed = parseData(response) || {};
+      setSelectedJob((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: routed.status || prev.status,
+              committee_type: routed.committee_type || prev.committee_type,
+            }
+          : prev,
+      );
+      setSuccess(
+        `Job routed to ${String(routed.routedCommittee || routed.committee_type || "committee").toLowerCase()} successfully.`,
+      );
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to route to committee");
+    } finally {
+      setRouteLoading(false);
     }
   };
 
@@ -801,6 +1148,14 @@ export default function SupplyBranchDashboard({ user }) {
       CATEGORY_SELECTED: "badge-warning",
       QUOTATION_REQUESTS_GENERATED: "badge-success",
       SCHEDULE_FROZEN: "badge-warning",
+      PENDING_TEC_DECISION: "badge-info",
+      TEC_DECISION_ENTERED: "badge-success",
+      PENDING_MINOR_COMMITTEE_APPROVAL: "badge-warning",
+      PENDING_MAJOR_COMMITTEE_APPROVAL: "badge-warning",
+      COMMITTEE_APPROVED: "badge-success",
+      COMMITTEE_REJECTED: "badge-danger",
+      COMMITTEE_CLARIFICATION_REQUESTED: "badge-info",
+      COMMITTEE_AMENDMENT_REQUESTED: "badge-info",
     };
 
     return map[status] || "badge-info";
@@ -946,6 +1301,16 @@ export default function SupplyBranchDashboard({ user }) {
                           onClick={() => openScheduleModal(job)}
                         >
                           Schedule
+                        </Button>
+                      )}
+
+                      {canTecWorkflow && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openTecModal(job)}
+                        >
+                          TEC & Committee
                         </Button>
                       )}
                     </div>
@@ -1471,6 +1836,268 @@ export default function SupplyBranchDashboard({ user }) {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={isModalOpen && modalType === "tec"}
+        onClose={closeModal}
+        title={`TEC & Committee - ${selectedJob?.job_number || `JOB-${selectedJob?.id || ""}`}`}
+      >
+        <div className="schedule-screen">
+          <div className="schedule-meta">
+            <p>
+              <strong>Status:</strong> {selectedJob?.status || "N/A"}
+            </p>
+            <p>
+              <strong>Committee Type:</strong>{" "}
+              {selectedJob?.committee_type || "N/A"}
+            </p>
+            <p>
+              <strong>Total Amount:</strong>{" "}
+              {formatCurrency(
+                selectedJob?.total_amount || selectedJob?.display_amount,
+              )}
+            </p>
+          </div>
+
+          <div className="action-buttons">
+            <Button
+              variant="secondary"
+              onClick={sendScheduleToTec}
+              disabled={
+                !canSupplyOrClerk ||
+                selectedJob?.status !== "SCHEDULE_FROZEN" ||
+                sendToTecLoading
+              }
+            >
+              {sendToTecLoading ? "Sending..." : "Send To TEC"}
+            </Button>
+            <Button
+              onClick={saveTecRecommendations}
+              disabled={
+                !canEditTecRecommendations ||
+                tecSaving ||
+                !["PENDING_TEC_DECISION", "TEC_DECISION_ENTERED"].includes(
+                  selectedJob?.status,
+                )
+              }
+            >
+              {tecSaving ? "Saving..." : "Save TEC Decisions"}
+            </Button>
+            <Button
+              variant="success"
+              onClick={generateCommitteeReport}
+              disabled={
+                !canSupplyOrClerk ||
+                reportLoading ||
+                selectedJob?.status !== "TEC_DECISION_ENTERED"
+              }
+            >
+              {reportLoading ? "Generating..." : "Generate Committee Report"}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={routeToCommittee}
+              disabled={
+                !canSupplyOrClerk ||
+                routeLoading ||
+                selectedJob?.status !== "TEC_DECISION_ENTERED"
+              }
+            >
+              {routeLoading ? "Routing..." : "Route To Committee"}
+            </Button>
+          </div>
+
+          {tecLoading ? (
+            <p className="empty-note">Loading TEC recommendations...</p>
+          ) : (
+            <div className="job-details-table-wrap">
+              <table className="table schedule-table tec-table">
+                <thead>
+                  <tr>
+                    <th>Supplier</th>
+                    <th>Item Name</th>
+                    <th>Description</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Decision</th>
+                    <th>Recommended</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tecRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>
+                        No TEC entries yet. Send schedule to TEC and add
+                        entries.
+                      </td>
+                    </tr>
+                  ) : (
+                    tecRows.map((row) => (
+                      <tr key={row.rowKey}>
+                        <td>{row.supplierName}</td>
+                        <td>
+                          <input
+                            type="text"
+                            value={row.itemName}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "itemName",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={row.itemDescription}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "itemDescription",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="1"
+                            value={row.quantity}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "quantity",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={row.unitPrice}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "unitPrice",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <select
+                            value={row.decisionStatus}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "decisionStatus",
+                                e.target.value,
+                              )
+                            }
+                          >
+                            {TEC_DECISION_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(row.isRecommended)}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "isRecommended",
+                                e.target.checked,
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="text"
+                            value={row.remarks}
+                            disabled={!canEditTecRecommendations}
+                            onChange={(e) =>
+                              handleTecFieldChange(
+                                row.rowKey,
+                                "remarks",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {committeeReport && (
+            <div className="report-block">
+              <h3>Committee Report Summary</h3>
+              <p>
+                <strong>Committee Type:</strong>{" "}
+                {committeeReport.committee_type}
+              </p>
+              <p>
+                <strong>Total Amount:</strong>{" "}
+                {formatCurrency(committeeReport.total_amount)}
+              </p>
+              <p>
+                <strong>Generated At:</strong>{" "}
+                {formatDateTime(committeeReport.generated_at)}
+              </p>
+
+              {toArray(committeeReport?.reportData?.suppliers).length > 0 && (
+                <div className="job-details-table-wrap">
+                  <table className="table job-details-table">
+                    <thead>
+                      <tr>
+                        <th>Supplier</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {committeeReport.reportData.suppliers.map((supplier) => (
+                        <tr key={supplier.supplierId}>
+                          <td>{supplier.supplierName}</td>
+                          <td>{toArray(supplier.items).length}</td>
+                          <td>{formatCurrency(supplier.totalAmount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="modal-actions">
+            <Button variant="secondary" onClick={closeModal}>
+              Close
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

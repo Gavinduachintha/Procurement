@@ -93,4 +93,45 @@ export const procurementController = {
     );
     res.json(frozen);
   }),
+
+  sendToTec: asyncHandler(async (req, res) => {
+    const updated = await procurementService.sendScheduleToTec(
+      req.user,
+      Number(req.params.jobId),
+    );
+    res.json(updated);
+  }),
+
+  listTecRecommendations: asyncHandler(async (req, res) => {
+    const recommendations = await procurementService.getTecRecommendations(
+      req.user,
+      Number(req.params.jobId),
+    );
+    res.json(recommendations);
+  }),
+
+  saveTecRecommendations: asyncHandler(async (req, res) => {
+    const result = await procurementService.submitTecRecommendations(
+      req.user,
+      Number(req.params.jobId),
+      req.body,
+    );
+    res.json(result);
+  }),
+
+  generateCommitteeReport: asyncHandler(async (req, res) => {
+    const report = await procurementService.generateCommitteeReport(
+      req.user,
+      Number(req.params.jobId),
+    );
+    res.json(report);
+  }),
+
+  routeToCommittee: asyncHandler(async (req, res) => {
+    const result = await procurementService.routeToCommittee(
+      req.user,
+      Number(req.params.jobId),
+    );
+    res.json(result);
+  }),
 };

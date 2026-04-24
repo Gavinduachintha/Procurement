@@ -47,6 +47,15 @@ export const procurementApi = {
     api.patch(`/procurement/jobs/${jobId}/schedule/lines/${supplierId}`, data),
   freezeSchedule: (jobId) =>
     api.post(`/procurement/jobs/${jobId}/schedule/freeze`),
+  sendToTec: (jobId) => api.post(`/procurement/jobs/${jobId}/send-to-tec`),
+  getTecRecommendations: (jobId) =>
+    api.get(`/procurement/jobs/${jobId}/tec-recommendations`),
+  saveTecRecommendations: (jobId, data) =>
+    api.post(`/procurement/jobs/${jobId}/tec-recommendations`, data),
+  generateCommitteeReport: (jobId) =>
+    api.post(`/procurement/jobs/${jobId}/committee-report/generate`),
+  routeToCommittee: (jobId) =>
+    api.post(`/procurement/jobs/${jobId}/committee-route`),
 };
 
 export const supplierApi = {

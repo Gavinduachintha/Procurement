@@ -116,6 +116,30 @@ export const jobRepository = {
     return rows[0] || null;
   },
 
+  async updateStatus(jobId, status) {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET status = $2
+       WHERE id = $1
+       RETURNING *`,
+      [jobId, status],
+    );
+    return rows[0] || null;
+  },
+
+  async setCommitteeSummary(jobId, committeeType, totalAmount, status) {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET committee_type = $2,
+           total_amount = $3,
+           status = $4
+       WHERE id = $1
+       RETURNING *`,
+      [jobId, committeeType, totalAmount, status],
+    );
+    return rows[0] || null;
+  },
+
   async listBySupplyBranchView() {
     const { rows } = await query(
       `SELECT j.*, pr.request_id, pr.item_name, pr.item_description, pr.technical_specifications,

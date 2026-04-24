@@ -31,6 +31,23 @@ router.post(
   "/jobs/:jobId/schedule/freeze",
   procurementController.freezeSchedule,
 );
+router.post("/jobs/:jobId/send-to-tec", procurementController.sendToTec);
+router.get(
+  "/jobs/:jobId/tec-recommendations",
+  procurementController.listTecRecommendations,
+);
+router.post(
+  "/jobs/:jobId/tec-recommendations",
+  procurementController.saveTecRecommendations,
+);
+router.post(
+  "/jobs/:jobId/committee-report/generate",
+  procurementController.generateCommitteeReport,
+);
+router.post(
+  "/jobs/:jobId/committee-route",
+  procurementController.routeToCommittee,
+);
 
 // Alternative routes (matching frontend expectations)
 // POST /procurement/:requestId/method -> creates job with procurement method for approved request

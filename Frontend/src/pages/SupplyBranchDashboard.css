@@ -42,7 +42,7 @@
 
 .job-action-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 1fr));
+  grid-template-columns: repeat(5, minmax(110px, 1fr));
   gap: 0.5rem;
 }
 
@@ -68,12 +68,17 @@
 
 .schedule-table input[type="text"],
 .schedule-table input[type="number"],
-.schedule-table input[type="date"] {
+.schedule-table input[type="date"],
+.schedule-table select {
   width: 100%;
   min-width: 120px;
   border: 1px solid #bdc3c7;
   border-radius: 4px;
   padding: 0.45rem;
+}
+
+.tec-table td {
+  min-width: 120px;
 }
 
 .schedule-table input[type="checkbox"] {
