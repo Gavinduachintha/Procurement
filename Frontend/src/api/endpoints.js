@@ -43,6 +43,9 @@ export const procurementApi = {
   generateLetters: (id, data) =>
     api.post(`/procurement/jobs/${id}/generate-letters`, data),
   getSchedule: (id) => api.get(`/procurement/jobs/${id}/schedule`),
+  updateScheduleLine: (jobId, supplierId, data) =>
+    api.patch(`/procurement/jobs/${jobId}/schedule/lines/${supplierId}`, data),
+  freezeSchedule: (jobId) => api.post(`/procurement/jobs/${jobId}/schedule/freeze`),
 };
 
 export const supplierApi = {

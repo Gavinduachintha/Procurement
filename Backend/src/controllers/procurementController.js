@@ -75,4 +75,22 @@ export const procurementController = {
     );
     res.json(schedule);
   }),
+
+  updateScheduleLine: asyncHandler(async (req, res) => {
+    const updated = await procurementService.updateProcurementScheduleLine(
+      req.user,
+      Number(req.params.jobId),
+      Number(req.params.supplierId),
+      req.body,
+    );
+    res.json(updated);
+  }),
+
+  freezeSchedule: asyncHandler(async (req, res) => {
+    const frozen = await procurementService.freezeProcurementSchedule(
+      req.user,
+      Number(req.params.jobId),
+    );
+    res.json(frozen);
+  }),
 };

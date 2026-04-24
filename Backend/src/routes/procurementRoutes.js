@@ -23,6 +23,14 @@ router.post(
   procurementController.generateLetters,
 );
 router.get("/jobs/:jobId/schedule", procurementController.schedule);
+router.patch(
+  "/jobs/:jobId/schedule/lines/:supplierId",
+  procurementController.updateScheduleLine,
+);
+router.post(
+  "/jobs/:jobId/schedule/freeze",
+  procurementController.freezeSchedule,
+);
 
 // Alternative routes (matching frontend expectations)
 // POST /procurement/:requestId/method -> creates job with procurement method for approved request

@@ -54,8 +54,8 @@ export default function Login({ setUser }) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <h1>🎓 Procurement System</h1>
-          <p>University Purchase Management</p>
+          <h1>University Purchase Management</h1>
+          <p>Wayamba University of Sri Lanka</p>
         </div>
 
         {error && <Alert type="error">{error}</Alert>}

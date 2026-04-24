@@ -457,6 +457,14 @@ export const initializeSchema = async () => {
 
     ALTER TABLE jobs ADD COLUMN IF NOT EXISTS committee_type TEXT;
     ALTER TABLE jobs ADD COLUMN IF NOT EXISTS total_amount NUMERIC(14,2);
+    ALTER TABLE jobs ADD COLUMN IF NOT EXISTS schedule_status TEXT NOT NULL DEFAULT 'NOT_CREATED';
+    ALTER TABLE jobs ADD COLUMN IF NOT EXISTS schedule_created_at TIMESTAMPTZ;
+    ALTER TABLE jobs ADD COLUMN IF NOT EXISTS schedule_deadline DATE;
+    ALTER TABLE jobs ADD COLUMN IF NOT EXISTS schedule_frozen_at TIMESTAMPTZ;
+
+    ALTER TABLE jobs DROP CONSTRAINT IF EXISTS jobs_schedule_status_check;
+    ALTER TABLE jobs ADD CONSTRAINT jobs_schedule_status_check
+    CHECK (schedule_status IN ('NOT_CREATED', 'OPEN', 'FROZEN'));
 
     CREATE TABLE IF NOT EXISTS suppliers (
       id BIGSERIAL PRIMARY KEY,

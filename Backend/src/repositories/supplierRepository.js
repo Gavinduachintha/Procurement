@@ -1,4 +1,4 @@
-import { query } from "../config/db.js";
+import { pool, query } from "../config/db.js";
 
 export const supplierRepository = {
   async create({ name, email, category }) {
@@ -32,13 +32,39 @@ export const supplierRepository = {
   },
 
   async attachSuppliers(jobId, supplierIds) {
-    for (const supplierId of supplierIds) {
-      await query(
-        `INSERT INTO job_suppliers (job_id, supplier_id)
-         VALUES ($1, $2)
-         ON CONFLICT (job_id, supplier_id) DO NOTHING`,
-        [jobId, supplierId],
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        `DELETE FROM quotation_requests
+         WHERE job_id = $1
+           AND NOT (supplier_id = ANY($2::bigint[]))`,
+        [jobId, supplierIds],
       );
+
+      await client.query(
+        `DELETE FROM job_suppliers
+         WHERE job_id = $1
+           AND NOT (supplier_id = ANY($2::bigint[]))`,
+        [jobId, supplierIds],
+      );
+
+      for (const supplierId of supplierIds) {
+        await client.query(
+          `INSERT INTO job_suppliers (job_id, supplier_id)
+           VALUES ($1, $2)
+           ON CONFLICT (job_id, supplier_id) DO NOTHING`,
+          [jobId, supplierId],
+        );
+      }
+
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
     }
 
     const { rows } = await query(
@@ -82,5 +108,23 @@ export const supplierRepository = {
     }
 
     return suppliers;
+  },
+
+  async updateJobSupplierQuotation(jobId, supplierId, payload) {
+    const { quotationReceived, quotedPrice, submissionDate, evaluationResult } =
+      payload;
+
+    const { rows } = await query(
+      `UPDATE job_suppliers
+       SET quotation_received = $3,
+           quoted_price = $4,
+           submission_date = $5,
+           evaluation_result = $6
+       WHERE job_id = $1 AND supplier_id = $2
+       RETURNING id, job_id, supplier_id, quotation_received, quoted_price, submission_date, evaluation_result`,
+      [jobId, supplierId, quotationReceived, quotedPrice, submissionDate, evaluationResult],
+    );
+
+    return rows[0] || null;
   },
 };

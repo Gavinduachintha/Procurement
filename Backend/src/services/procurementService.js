@@ -6,6 +6,7 @@ import { ApiError } from "../utils/apiError.js";
 import {
   PROCUREMENT_METHODS,
   REQUEST_STATUS,
+  SCHEDULE_STATUS,
   USER_ROLES,
 } from "../utils/constants.js";
 import { notificationService } from "./notificationService.js";
@@ -17,6 +18,20 @@ const toIsoDate = (value) => {
   }
 
   return date.toISOString().slice(0, 10);
+};
+
+const canManageScheduleForJob = (user, job) => {
+  if (
+    ![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)
+  ) {
+    return false;
+  }
+
+  if (user.role === USER_ROLES.SUPPLY_BRANCH) {
+    return true;
+  }
+
+  return job.assigned_clerk_id === user.id;
 };
 
 export const procurementService = {
@@ -263,20 +278,11 @@ export const procurementService = {
       throw new ApiError(404, "Job not found");
     }
 
-    if (
-      ![USER_ROLES.SUBJECT_CLERK, USER_ROLES.SUPPLY_BRANCH].includes(user.role)
-    ) {
+    if (!canManageScheduleForJob(user, job)) {
       throw new ApiError(
         403,
-        "Only subject clerk or supply branch can generate quotation letters",
+        "You are not allowed to manage this job schedule",
       );
-    }
-
-    if (
-      user.role === USER_ROLES.SUBJECT_CLERK &&
-      job.assigned_clerk_id !== user.id
-    ) {
-      throw new ApiError(403, "You are not assigned to this job");
     }
 
     const submissionDeadline = toIsoDate(payload.submissionDeadline);
@@ -311,6 +317,8 @@ export const procurementService = {
       letterContent,
     );
 
+    await jobRepository.openSchedule(jobId, submissionDeadline);
+
     return {
       jobNumber: job.job_number,
       letterContent,
@@ -329,9 +337,14 @@ export const procurementService = {
     const suppliers = await supplierRepository.listSelectedForJob(job.id);
 
     return {
+      jobId: job.id,
       jobNumber: job.job_number,
       itemName: request.item_name,
       description: request.item_description,
+      scheduleStatus: job.schedule_status || SCHEDULE_STATUS.NOT_CREATED,
+      scheduleCreatedAt: job.schedule_created_at,
+      submissionDeadline: job.schedule_deadline,
+      scheduleFrozenAt: job.schedule_frozen_at,
       rows: suppliers.map((s) => ({
         supplierId: s.id,
         supplierName: s.name,
@@ -341,5 +354,132 @@ export const procurementService = {
         evaluationResult: s.evaluation_result,
       })),
     };
+  },
+
+  async updateProcurementScheduleLine(user, jobId, supplierId, payload) {
+    const job = await jobRepository.findById(jobId);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    if (!canManageScheduleForJob(user, job)) {
+      throw new ApiError(
+        403,
+        "You are not allowed to manage this job schedule",
+      );
+    }
+
+    if (
+      (job.schedule_status || SCHEDULE_STATUS.NOT_CREATED) ===
+      SCHEDULE_STATUS.NOT_CREATED
+    ) {
+      throw new ApiError(
+        400,
+        "Generate quotation request letters before updating schedule",
+      );
+    }
+
+    if (
+      (job.schedule_status || SCHEDULE_STATUS.NOT_CREATED) ===
+      SCHEDULE_STATUS.FROZEN
+    ) {
+      throw new ApiError(400, "Schedule is frozen and cannot be edited");
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (job.schedule_deadline && job.schedule_deadline < today) {
+      await jobRepository.freezeSchedule(jobId);
+      throw new ApiError(
+        400,
+        "Submission deadline has passed. Schedule is now frozen",
+      );
+    }
+
+    const normalizedSupplierId = Number(supplierId);
+    if (!Number.isFinite(normalizedSupplierId)) {
+      throw new ApiError(400, "Supplier ID is invalid");
+    }
+
+    const quotationReceived = Boolean(payload.quotationReceived);
+    const submissionDate = payload.submissionDate
+      ? toIsoDate(payload.submissionDate)
+      : null;
+
+    if (payload.submissionDate && !submissionDate) {
+      throw new ApiError(400, "submissionDate is invalid");
+    }
+
+    const normalizedQuotedPrice =
+      payload.quotedPrice === null || payload.quotedPrice === ""
+        ? null
+        : Number(payload.quotedPrice);
+
+    if (
+      normalizedQuotedPrice !== null &&
+      (!Number.isFinite(normalizedQuotedPrice) || normalizedQuotedPrice < 0)
+    ) {
+      throw new ApiError(400, "quotedPrice must be a non-negative number");
+    }
+
+    const updated = await supplierRepository.updateJobSupplierQuotation(
+      jobId,
+      normalizedSupplierId,
+      {
+        quotationReceived,
+        quotedPrice: quotationReceived ? normalizedQuotedPrice : null,
+        submissionDate: quotationReceived ? submissionDate : null,
+        evaluationResult: payload.evaluationResult || null,
+      },
+    );
+
+    if (!updated) {
+      throw new ApiError(404, "Supplier line not found in this schedule");
+    }
+
+    return updated;
+  },
+
+  async freezeProcurementSchedule(user, jobId) {
+    const job = await jobRepository.findById(jobId);
+    if (!job) {
+      throw new ApiError(404, "Job not found");
+    }
+
+    if (!canManageScheduleForJob(user, job)) {
+      throw new ApiError(
+        403,
+        "You are not allowed to manage this job schedule",
+      );
+    }
+
+    if (
+      (job.schedule_status || SCHEDULE_STATUS.NOT_CREATED) ===
+      SCHEDULE_STATUS.NOT_CREATED
+    ) {
+      throw new ApiError(400, "Schedule has not been created yet");
+    }
+
+    if (
+      (job.schedule_status || SCHEDULE_STATUS.NOT_CREATED) ===
+      SCHEDULE_STATUS.FROZEN
+    ) {
+      return job;
+    }
+
+    const frozen = await jobRepository.freezeSchedule(jobId);
+    if (!frozen) {
+      throw new ApiError(500, "Failed to freeze schedule");
+    }
+
+    await notificationService.notifyUsers(
+      [job.assigned_clerk_id].filter(Boolean),
+      {
+        eventType: "PROCUREMENT_SCHEDULE_FROZEN",
+        subject: `Schedule frozen (${job.job_number})`,
+        message: `Quotation schedule for job ${job.job_number} has been frozen for evaluation.`,
+      },
+    );
+
+    return frozen;
   },
 };

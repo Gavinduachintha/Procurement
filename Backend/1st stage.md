@@ -179,6 +179,23 @@
 
 **System creates Procurement Schedule Table**
 
+**When it starts:**
+- Immediately after Stage 9 (Quotation Request Letters are generated/sent)
+- System does **not** wait for supplier quotations to create the schedule
+
+**How it is generated:**
+- Schedule header is created from job details (Job Number, item, description)
+- One schedule line is created for each invited supplier
+- Quotation fields are initialized as empty
+
+**During quotation period:**
+- Officers update each supplier line when quotations are received
+- Updated fields include: quotation received, quoted price, submission date, evaluation result
+
+**After deadline:**
+- Schedule is frozen (no more quotation edits)
+- Evaluation and recommendation proceed using the same schedule data
+
 **Example structure:**
 
 | Job Number   | Item Name | Description        | Supplier A | Supplier B | Supplier C |

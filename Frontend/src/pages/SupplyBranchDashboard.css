@@ -42,8 +42,43 @@
 
 .job-action-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(110px, 1fr));
   gap: 0.5rem;
+}
+
+.schedule-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.schedule-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.75rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dbe1e4;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.schedule-meta p {
+  margin: 0;
+}
+
+.schedule-table input[type="text"],
+.schedule-table input[type="number"],
+.schedule-table input[type="date"] {
+  width: 100%;
+  min-width: 120px;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  padding: 0.45rem;
+}
+
+.schedule-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
 }
 
 .job-details-screen {
@@ -216,6 +251,10 @@
   }
 
   .report-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-meta {
     grid-template-columns: 1fr;
   }
 

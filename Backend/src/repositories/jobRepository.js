@@ -88,6 +88,34 @@ export const jobRepository = {
     return rows[0];
   },
 
+  async openSchedule(jobId, submissionDeadline) {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET schedule_status = 'OPEN',
+           schedule_created_at = COALESCE(schedule_created_at, NOW()),
+           schedule_deadline = $2,
+           schedule_frozen_at = NULL,
+           status = 'QUOTATION_REQUESTS_GENERATED'
+       WHERE id = $1
+       RETURNING *`,
+      [jobId, submissionDeadline],
+    );
+    return rows[0] || null;
+  },
+
+  async freezeSchedule(jobId) {
+    const { rows } = await query(
+      `UPDATE jobs
+       SET schedule_status = 'FROZEN',
+           schedule_frozen_at = NOW(),
+           status = 'SCHEDULE_FROZEN'
+       WHERE id = $1
+       RETURNING *`,
+      [jobId],
+    );
+    return rows[0] || null;
+  },
+
   async listBySupplyBranchView() {
     const { rows } = await query(
       `SELECT j.*, pr.request_id, pr.item_name, pr.item_description, pr.technical_specifications,

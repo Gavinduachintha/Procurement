@@ -87,6 +87,23 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const toDateInputValue = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value.slice(0, 10);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+};
+
 const toArray = (value) => {
   if (Array.isArray(value)) {
     return value;
@@ -136,6 +153,11 @@ export default function SupplyBranchDashboard({ user }) {
   const [selectedClerkId, setSelectedClerkId] = useState("");
   const [clerkAssignHint, setClerkAssignHint] = useState("");
   const [suppliersSaved, setSuppliersSaved] = useState(false);
+  const [scheduleData, setScheduleData] = useState(null);
+  const [scheduleRows, setScheduleRows] = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleFreezeLoading, setScheduleFreezeLoading] = useState(false);
+  const [savingSupplierId, setSavingSupplierId] = useState(null);
 
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -322,6 +344,148 @@ export default function SupplyBranchDashboard({ user }) {
     setSelectedJob(job);
     setModalType("details");
     setIsModalOpen(true);
+  };
+
+  const openScheduleModal = async (job) => {
+    setSelectedJob(job);
+    setModalType("schedule");
+    setScheduleData(null);
+    setScheduleRows([]);
+    setIsModalOpen(true);
+    setScheduleLoading(true);
+    setError("");
+
+    try {
+      const response = await api.get(`/procurement/jobs/${job.id}/schedule`);
+      const data = parseData(response) || {};
+      const rows = Array.isArray(data.rows)
+        ? data.rows.map((row) => ({
+            ...row,
+            quotationReceived: Boolean(row.quotationReceived),
+            quotedPrice:
+              row.quotedPrice === null || row.quotedPrice === undefined
+                ? ""
+                : String(row.quotedPrice),
+            submissionDate: toDateInputValue(row.submissionDate),
+            evaluationResult: row.evaluationResult || "",
+          }))
+        : [];
+
+      setScheduleData(data);
+      setScheduleRows(rows);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load schedule");
+    } finally {
+      setScheduleLoading(false);
+    }
+  };
+
+  const handleScheduleFieldChange = (supplierId, field, value) => {
+    setScheduleRows((prev) =>
+      prev.map((row) => {
+        if (row.supplierId !== supplierId) {
+          return row;
+        }
+
+        if (field === "quotationReceived") {
+          const nextReceived = Boolean(value);
+          return {
+            ...row,
+            quotationReceived: nextReceived,
+            quotedPrice: nextReceived ? row.quotedPrice : "",
+            submissionDate: nextReceived ? row.submissionDate : "",
+          };
+        }
+
+        return {
+          ...row,
+          [field]: value,
+        };
+      }),
+    );
+  };
+
+  const saveScheduleLine = async (row) => {
+    if (!selectedJob || !row?.supplierId) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setSavingSupplierId(row.supplierId);
+
+    try {
+      await api.patch(
+        `/procurement/jobs/${selectedJob.id}/schedule/lines/${row.supplierId}`,
+        {
+          quotationReceived: Boolean(row.quotationReceived),
+          quotedPrice: row.quotationReceived ? row.quotedPrice : null,
+          submissionDate: row.quotationReceived ? row.submissionDate : null,
+          evaluationResult: row.evaluationResult,
+        },
+      );
+
+      setSuccess(`Saved quotation data for ${row.supplierName}.`);
+      const response = await api.get(`/procurement/jobs/${selectedJob.id}/schedule`);
+      const data = parseData(response) || {};
+      setScheduleData(data);
+      setScheduleRows(
+        Array.isArray(data.rows)
+          ? data.rows.map((entry) => ({
+              ...entry,
+              quotationReceived: Boolean(entry.quotationReceived),
+              quotedPrice:
+                entry.quotedPrice === null || entry.quotedPrice === undefined
+                  ? ""
+                  : String(entry.quotedPrice),
+              submissionDate: toDateInputValue(entry.submissionDate),
+              evaluationResult: entry.evaluationResult || "",
+            }))
+          : [],
+      );
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save schedule line");
+    } finally {
+      setSavingSupplierId(null);
+    }
+  };
+
+  const freezeSchedule = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setScheduleFreezeLoading(true);
+
+    try {
+      await api.post(`/procurement/jobs/${selectedJob.id}/schedule/freeze`);
+      setSuccess("Schedule frozen. Quotation editing is now locked.");
+      const response = await api.get(`/procurement/jobs/${selectedJob.id}/schedule`);
+      const data = parseData(response) || {};
+      setScheduleData(data);
+      setScheduleRows(
+        Array.isArray(data.rows)
+          ? data.rows.map((entry) => ({
+              ...entry,
+              quotationReceived: Boolean(entry.quotationReceived),
+              quotedPrice:
+                entry.quotedPrice === null || entry.quotedPrice === undefined
+                  ? ""
+                  : String(entry.quotedPrice),
+              submissionDate: toDateInputValue(entry.submissionDate),
+              evaluationResult: entry.evaluationResult || "",
+            }))
+          : [],
+      );
+      await loadData();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to freeze schedule");
+    } finally {
+      setScheduleFreezeLoading(false);
+    }
   };
 
   const submitAssignClerk = async () => {
@@ -632,6 +796,7 @@ export default function SupplyBranchDashboard({ user }) {
       CLERK_ASSIGNED: "badge-info",
       CATEGORY_SELECTED: "badge-warning",
       QUOTATION_REQUESTS_GENERATED: "badge-success",
+      SCHEDULE_FROZEN: "badge-warning",
     };
 
     return map[status] || "badge-info";
@@ -767,6 +932,16 @@ export default function SupplyBranchDashboard({ user }) {
                           onClick={() => openSuppliersModal(job)}
                         >
                           Suppliers
+                        </Button>
+                      )}
+
+                      {canManageWorkflow && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => openScheduleModal(job)}
+                        >
+                          Schedule
                         </Button>
                       )}
                     </div>
@@ -1146,6 +1321,147 @@ export default function SupplyBranchDashboard({ user }) {
             Close
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={isModalOpen && modalType === "schedule"}
+        onClose={closeModal}
+        title={`Procurement Schedule - ${selectedJob?.job_number || `JOB-${selectedJob?.id || ""}`}`}
+      >
+        {scheduleLoading ? (
+          <p className="empty-note">Loading schedule...</p>
+        ) : !scheduleData ? (
+          <p className="empty-note">No schedule found for this job.</p>
+        ) : (
+          <div className="schedule-screen">
+            <div className="schedule-meta">
+              <p>
+                <strong>Status:</strong> {scheduleData.scheduleStatus || "N/A"}
+              </p>
+              <p>
+                <strong>Submission Deadline:</strong>{" "}
+                {formatDate(scheduleData.submissionDeadline)}
+              </p>
+              <p>
+                <strong>Frozen At:</strong> {formatDateTime(scheduleData.scheduleFrozenAt)}
+              </p>
+            </div>
+
+            <div className="job-details-table-wrap">
+              <table className="table schedule-table">
+                <thead>
+                  <tr>
+                    <th>Supplier</th>
+                    <th>Quotation Received</th>
+                    <th>Quoted Price</th>
+                    <th>Submission Date</th>
+                    <th>Evaluation Result</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduleRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>No suppliers in this schedule yet.</td>
+                    </tr>
+                  ) : (
+                    scheduleRows.map((row) => {
+                      const isFrozen = scheduleData.scheduleStatus === "FROZEN";
+                      return (
+                        <tr key={row.supplierId}>
+                          <td>{row.supplierName}</td>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={Boolean(row.quotationReceived)}
+                              disabled={isFrozen}
+                              onChange={(e) =>
+                                handleScheduleFieldChange(
+                                  row.supplierId,
+                                  "quotationReceived",
+                                  e.target.checked,
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={row.quotedPrice}
+                              disabled={!row.quotationReceived || isFrozen}
+                              onChange={(e) =>
+                                handleScheduleFieldChange(
+                                  row.supplierId,
+                                  "quotedPrice",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="date"
+                              value={row.submissionDate}
+                              disabled={!row.quotationReceived || isFrozen}
+                              onChange={(e) =>
+                                handleScheduleFieldChange(
+                                  row.supplierId,
+                                  "submissionDate",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="text"
+                              value={row.evaluationResult}
+                              disabled={isFrozen}
+                              onChange={(e) =>
+                                handleScheduleFieldChange(
+                                  row.supplierId,
+                                  "evaluationResult",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </td>
+                          <td>
+                            <Button
+                              size="sm"
+                              onClick={() => saveScheduleLine(row)}
+                              disabled={isFrozen || savingSupplierId === row.supplierId}
+                            >
+                              {savingSupplierId === row.supplierId ? "Saving..." : "Save"}
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="modal-actions">
+              <Button
+                variant="danger"
+                onClick={freezeSchedule}
+                disabled={
+                  scheduleData.scheduleStatus === "FROZEN" ||
+                  scheduleFreezeLoading
+                }
+              >
+                {scheduleFreezeLoading ? "Freezing..." : "Freeze Schedule"}
+              </Button>
+              <Button variant="secondary" onClick={closeModal}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
