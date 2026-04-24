@@ -122,7 +122,14 @@ export const supplierRepository = {
            evaluation_result = $6
        WHERE job_id = $1 AND supplier_id = $2
        RETURNING id, job_id, supplier_id, quotation_received, quoted_price, submission_date, evaluation_result`,
-      [jobId, supplierId, quotationReceived, quotedPrice, submissionDate, evaluationResult],
+      [
+        jobId,
+        supplierId,
+        quotationReceived,
+        quotedPrice,
+        submissionDate,
+        evaluationResult,
+      ],
     );
 
     return rows[0] || null;

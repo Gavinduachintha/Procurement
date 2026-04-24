@@ -426,7 +426,9 @@ export default function SupplyBranchDashboard({ user }) {
       );
 
       setSuccess(`Saved quotation data for ${row.supplierName}.`);
-      const response = await api.get(`/procurement/jobs/${selectedJob.id}/schedule`);
+      const response = await api.get(
+        `/procurement/jobs/${selectedJob.id}/schedule`,
+      );
       const data = parseData(response) || {};
       setScheduleData(data);
       setScheduleRows(
@@ -463,7 +465,9 @@ export default function SupplyBranchDashboard({ user }) {
     try {
       await api.post(`/procurement/jobs/${selectedJob.id}/schedule/freeze`);
       setSuccess("Schedule frozen. Quotation editing is now locked.");
-      const response = await api.get(`/procurement/jobs/${selectedJob.id}/schedule`);
+      const response = await api.get(
+        `/procurement/jobs/${selectedJob.id}/schedule`,
+      );
       const data = parseData(response) || {};
       setScheduleData(data);
       setScheduleRows(
@@ -1343,7 +1347,8 @@ export default function SupplyBranchDashboard({ user }) {
                 {formatDate(scheduleData.submissionDeadline)}
               </p>
               <p>
-                <strong>Frozen At:</strong> {formatDateTime(scheduleData.scheduleFrozenAt)}
+                <strong>Frozen At:</strong>{" "}
+                {formatDateTime(scheduleData.scheduleFrozenAt)}
               </p>
             </div>
 
@@ -1432,9 +1437,13 @@ export default function SupplyBranchDashboard({ user }) {
                             <Button
                               size="sm"
                               onClick={() => saveScheduleLine(row)}
-                              disabled={isFrozen || savingSupplierId === row.supplierId}
+                              disabled={
+                                isFrozen || savingSupplierId === row.supplierId
+                              }
                             >
-                              {savingSupplierId === row.supplierId ? "Saving..." : "Save"}
+                              {savingSupplierId === row.supplierId
+                                ? "Saving..."
+                                : "Save"}
                             </Button>
                           </td>
                         </tr>
