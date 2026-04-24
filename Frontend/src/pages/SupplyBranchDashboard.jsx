@@ -7,6 +7,10 @@ import Select from "../components/Select";
 import Input from "../components/Input";
 import Alert from "../components/Alert";
 import Modal from "../components/Modal";
+import {
+  CommitteeReportPdf,
+  TecReportPdf,
+} from "../components/ProcurementReportsPdf";
 import QuotationRequestLetter from "../components/QuotationRequestLetter";
 import universityLogo from "../../assets/logo.png";
 import "./SupplyBranchDashboard.css";
@@ -146,6 +150,17 @@ const getSafeFilePart = (value) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "supplier";
+
+const downloadBlobFile = (blob, fileName) => {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
+};
 
 const getMethodLabel = (methodCode) => {
   if (!methodCode) {
@@ -724,6 +739,65 @@ export default function SupplyBranchDashboard({ user }) {
       setError(err.response?.data?.message || "Failed to route to committee");
     } finally {
       setRouteLoading(false);
+    }
+  };
+
+  const downloadTecReportPdf = async () => {
+    if (!selectedJob) {
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setActionLoading(true);
+
+    try {
+      const blob = await pdf(
+        <TecReportPdf
+          job={selectedJob}
+          rows={tecRows}
+          generatedBy={user?.full_name || user?.name || user?.email || "User"}
+          generatedAt={new Date().toLocaleString()}
+        />,
+      ).toBlob();
+
+      const fileName = `tec-report-${selectedJob.job_number || selectedJob.id}.pdf`;
+      downloadBlobFile(blob, fileName);
+      setSuccess("TEC report PDF downloaded.");
+    } catch (err) {
+      setError(err?.message || "Failed to generate TEC report PDF");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const downloadCommitteeReportPdf = async () => {
+    if (!selectedJob || !committeeReport) {
+      setError("Generate committee report first");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setActionLoading(true);
+
+    try {
+      const blob = await pdf(
+        <CommitteeReportPdf
+          job={selectedJob}
+          report={committeeReport}
+          generatedBy={user?.full_name || user?.name || user?.email || "User"}
+          generatedAt={new Date().toLocaleString()}
+        />,
+      ).toBlob();
+
+      const fileName = `committee-report-${selectedJob.job_number || selectedJob.id}.pdf`;
+      downloadBlobFile(blob, fileName);
+      setSuccess("Committee report PDF downloaded.");
+    } catch (err) {
+      setError(err?.message || "Failed to generate committee report PDF");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -1894,6 +1968,20 @@ export default function SupplyBranchDashboard({ user }) {
               }
             >
               {reportLoading ? "Generating..." : "Generate Committee Report"}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={downloadTecReportPdf}
+              disabled={actionLoading || tecRows.length === 0}
+            >
+              Download TEC PDF
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={downloadCommitteeReportPdf}
+              disabled={actionLoading || !committeeReport}
+            >
+              Download Committee PDF
             </Button>
             <Button
               variant="danger"
