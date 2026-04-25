@@ -230,7 +230,10 @@ const buildTecWorkbook = (xlsx, { job, rows, generatedBy, generatedAt }) => {
   return workbook;
 };
 
-const buildCommitteeWorkbook = (xlsx, { job, report, generatedBy, generatedAt }) => {
+const buildCommitteeWorkbook = (
+  xlsx,
+  { job, report, generatedBy, generatedAt },
+) => {
   const workbook = xlsx.utils.book_new();
   const suppliers = Array.isArray(report?.reportData?.suppliers)
     ? report.reportData.suppliers
@@ -261,7 +264,8 @@ const buildCommitteeWorkbook = (xlsx, { job, report, generatedBy, generatedAt })
       xlsx,
       suppliers.map((supplier) => ({
         Supplier: supplier?.supplierName || supplier?.supplier_name || "-",
-        "Supplier Code": supplier?.supplierCode || supplier?.supplier_code || "-",
+        "Supplier Code":
+          supplier?.supplierCode || supplier?.supplier_code || "-",
         Items: Array.isArray(supplier?.items) ? supplier.items.length : 0,
         "Total Amount": Number(supplier?.totalAmount) || 0,
       })),
@@ -272,8 +276,10 @@ const buildCommitteeWorkbook = (xlsx, { job, report, generatedBy, generatedAt })
   );
 
   const itemRows = suppliers.flatMap((supplier) => {
-    const supplierName = supplier?.supplierName || supplier?.supplier_name || "-";
-    const supplierCode = supplier?.supplierCode || supplier?.supplier_code || "-";
+    const supplierName =
+      supplier?.supplierName || supplier?.supplier_name || "-";
+    const supplierCode =
+      supplier?.supplierCode || supplier?.supplier_code || "-";
     const items = Array.isArray(supplier?.items) ? supplier.items : [];
 
     return items.map((item) => ({

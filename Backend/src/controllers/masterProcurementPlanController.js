@@ -3,7 +3,10 @@ import { masterProcurementPlanService } from "../services/masterProcurementPlanS
 
 export const masterProcurementPlanController = {
   create: asyncHandler(async (req, res) => {
-    const created = await masterProcurementPlanService.createOrDraft(req.user, req.body);
+    const created = await masterProcurementPlanService.createOrDraft(
+      req.user,
+      req.body,
+    );
     res.status(201).json(created);
   }),
 

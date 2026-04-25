@@ -28,8 +28,19 @@ const DEPARTMENT_OPTIONS = [
   "Strengthening Research (SRHDC)/Masters",
 ];
 
-const PROCUREMENT_CATEGORY_OPTIONS = ["Works", "Goods", "Services", "Consultancy"];
-const SOURCE_OF_FINANCING_OPTIONS = ["GOSL", "ADB", "World Bank", "Own Revenue", "Other Donor"];
+const PROCUREMENT_CATEGORY_OPTIONS = [
+  "Works",
+  "Goods",
+  "Services",
+  "Consultancy",
+];
+const SOURCE_OF_FINANCING_OPTIONS = [
+  "GOSL",
+  "ADB",
+  "World Bank",
+  "Own Revenue",
+  "Other Donor",
+];
 
 const PROCUREMENT_METHOD_OPTIONS = [
   "ICB",
@@ -106,7 +117,10 @@ const validateForSubmit = (payload) => {
     throw new ApiError(400, "Description is required");
   }
 
-  if (!Number.isFinite(payload.estimatedCostMn) || payload.estimatedCostMn <= 0) {
+  if (
+    !Number.isFinite(payload.estimatedCostMn) ||
+    payload.estimatedCostMn <= 0
+  ) {
     throw new ApiError(400, "Estimated cost must be greater than zero");
   }
 
@@ -131,7 +145,10 @@ const validateForSubmit = (payload) => {
   }
 
   if (!payload.currentStatus) {
-    throw new ApiError(400, "Current procurement preparedness status is required");
+    throw new ApiError(
+      400,
+      "Current procurement preparedness status is required",
+    );
   }
 
   validateAllowedValues("Department", payload.department, DEPARTMENT_OPTIONS);
@@ -155,21 +172,34 @@ const validateForSubmit = (payload) => {
     payload.levelOfAuthority,
     LEVEL_OF_AUTHORITY_OPTIONS,
   );
-  validateAllowedValues("Priority status", payload.priorityStatus, PRIORITY_STATUS_OPTIONS);
-  validateAllowedValues("Current status", payload.currentStatus, CURRENT_STATUS_OPTIONS);
+  validateAllowedValues(
+    "Priority status",
+    payload.priorityStatus,
+    PRIORITY_STATUS_OPTIONS,
+  );
+  validateAllowedValues(
+    "Current status",
+    payload.currentStatus,
+    CURRENT_STATUS_OPTIONS,
+  );
 
   if (
     payload.sourceOfFinancing === "Other Donor" &&
     !payload.donorFinancierName
   ) {
-    throw new ApiError(400, "Donor/Financier name is required when source is Other Donor");
+    throw new ApiError(
+      400,
+      "Donor/Financier name is required when source is Other Donor",
+    );
   }
 };
 
 const enrichForPersistence = (payload, user, recordStatus) => {
   const departmentRank = DEPARTMENT_OPTIONS.indexOf(payload.department) + 1;
-  const procurementCategoryRank = PROCUREMENT_CATEGORY_OPTIONS.indexOf(payload.procurementCategory) + 1;
-  const procurementMethodRank = PROCUREMENT_METHOD_OPTIONS.indexOf(payload.procurementMethod) + 1;
+  const procurementCategoryRank =
+    PROCUREMENT_CATEGORY_OPTIONS.indexOf(payload.procurementCategory) + 1;
+  const procurementMethodRank =
+    PROCUREMENT_METHOD_OPTIONS.indexOf(payload.procurementMethod) + 1;
 
   return {
     ...payload,
@@ -193,15 +223,20 @@ const enrichForPersistence = (payload, user, recordStatus) => {
     reference: payload.reference || null,
     remark: payload.remark || null,
     departmentRank: departmentRank > 0 ? departmentRank : 0,
-    procurementCategoryRank: procurementCategoryRank > 0 ? procurementCategoryRank : 0,
-    procurementMethodRank: procurementMethodRank > 0 ? procurementMethodRank : 0,
+    procurementCategoryRank:
+      procurementCategoryRank > 0 ? procurementCategoryRank : 0,
+    procurementMethodRank:
+      procurementMethodRank > 0 ? procurementMethodRank : 0,
   };
 };
 
 export const masterProcurementPlanService = {
   async createOrDraft(user, rawPayload) {
     if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
-      throw new ApiError(403, "Only supply branch officers can create master procurement plans");
+      throw new ApiError(
+        403,
+        "Only supply branch officers can create master procurement plans",
+      );
     }
 
     const payload = normalizePayload(rawPayload);
@@ -217,12 +252,17 @@ export const masterProcurementPlanService = {
       isDraft ? "DRAFT" : "SUBMITTED",
     );
 
-    return masterProcurementPlanRepository.createWithGeneratedItemCode(normalizedForSave);
+    return masterProcurementPlanRepository.createWithGeneratedItemCode(
+      normalizedForSave,
+    );
   },
 
   async listMine(user) {
     if (user.role !== USER_ROLES.SUPPLY_BRANCH) {
-      throw new ApiError(403, "Only supply branch officers can view master procurement plans");
+      throw new ApiError(
+        403,
+        "Only supply branch officers can view master procurement plans",
+      );
     }
 
     return masterProcurementPlanRepository.listByCreator(user.id);

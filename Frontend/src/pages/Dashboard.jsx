@@ -153,7 +153,9 @@ export default function Dashboard({ user }) {
               New Request
             </Link>
           )}
-          {String(user?.role || "").trim().toUpperCase() === "SUPPLY_BRANCH" && (
+          {String(user?.role || "")
+            .trim()
+            .toUpperCase() === "SUPPLY_BRANCH" && (
             <Link to="/master-procurement-plan/new" className="btn btn-success">
               <Plus size={18} />
               Open Master Plan Form

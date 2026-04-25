@@ -34,8 +34,19 @@ const DEPARTMENT_OPTIONS = [
   "Strengthening Research (SRHDC)/Masters",
 ];
 
-const PROCUREMENT_CATEGORY_OPTIONS = ["Works", "Goods", "Services", "Consultancy"];
-const SOURCE_OF_FINANCING_OPTIONS = ["GOSL", "ADB", "World Bank", "Own Revenue", "Other Donor"];
+const PROCUREMENT_CATEGORY_OPTIONS = [
+  "Works",
+  "Goods",
+  "Services",
+  "Consultancy",
+];
+const SOURCE_OF_FINANCING_OPTIONS = [
+  "GOSL",
+  "ADB",
+  "World Bank",
+  "Own Revenue",
+  "Other Donor",
+];
 const PROCUREMENT_METHOD_OPTIONS = [
   "ICB",
   "LIB",
@@ -45,7 +56,14 @@ const PROCUREMENT_METHOD_OPTIONS = [
   "National Shopping",
   "Direct Contracting",
 ];
-const LEVEL_OF_AUTHORITY_OPTIONS = ["HLPC", "SHLPC", "MPC", "DPC Minor", "DPC Major", "RPC"];
+const LEVEL_OF_AUTHORITY_OPTIONS = [
+  "HLPC",
+  "SHLPC",
+  "MPC",
+  "DPC Minor",
+  "DPC Major",
+  "RPC",
+];
 const PRIORITY_OPTIONS = [
   { label: "Priority (P)", value: "P" },
   { label: "Normal (N)", value: "N" },
@@ -86,7 +104,8 @@ const createInitialFormData = () => ({
   remark: "",
 });
 
-const mapSelectOptions = (values) => values.map((value) => ({ label: value, value }));
+const mapSelectOptions = (values) =>
+  values.map((value) => ({ label: value, value }));
 
 export default function MasterProcurementPlanForm({ user }) {
   const [formData, setFormData] = useState(createInitialFormData());
@@ -102,15 +121,21 @@ export default function MasterProcurementPlanForm({ user }) {
 
   const previewItemCode = useMemo(() => {
     const departmentRank = DEPARTMENT_OPTIONS.indexOf(formData.department) + 1;
-    const categoryRank = PROCUREMENT_CATEGORY_OPTIONS.indexOf(formData.procurementCategory) + 1;
-    const methodRank = PROCUREMENT_METHOD_OPTIONS.indexOf(formData.procurementMethod) + 1;
+    const categoryRank =
+      PROCUREMENT_CATEGORY_OPTIONS.indexOf(formData.procurementCategory) + 1;
+    const methodRank =
+      PROCUREMENT_METHOD_OPTIONS.indexOf(formData.procurementMethod) + 1;
 
     if (departmentRank < 1 || categoryRank < 1 || methodRank < 1) {
       return "Auto-generated on save";
     }
 
     return `${departmentRank}.${categoryRank}.${methodRank}.x`;
-  }, [formData.department, formData.procurementCategory, formData.procurementMethod]);
+  }, [
+    formData.department,
+    formData.procurementCategory,
+    formData.procurementMethod,
+  ]);
 
   if (!canAccess) {
     return (
@@ -123,7 +148,8 @@ export default function MasterProcurementPlanForm({ user }) {
           <span className="plan-year-badge">Plan Year: {PLAN_YEAR}</span>
         </div>
         <Alert type="error">
-          Form access is allowed only for SUPPLY_BRANCH users. Current role: {normalizedRole || "UNKNOWN"}.
+          Form access is allowed only for SUPPLY_BRANCH users. Current role:{" "}
+          {normalizedRole || "UNKNOWN"}.
         </Alert>
       </div>
     );
@@ -163,7 +189,11 @@ export default function MasterProcurementPlanForm({ user }) {
     }
 
     const estimatedCost = Number(formData.estimatedCostMn);
-    if (formData.estimatedCostMn === "" || !Number.isFinite(estimatedCost) || estimatedCost <= 0) {
+    if (
+      formData.estimatedCostMn === "" ||
+      !Number.isFinite(estimatedCost) ||
+      estimatedCost <= 0
+    ) {
       nextErrors.estimatedCostMn = "Estimated cost must be greater than zero";
     }
 
@@ -184,11 +214,13 @@ export default function MasterProcurementPlanForm({ user }) {
     }
 
     if (!formData.currentStatus) {
-      nextErrors.currentStatus = "Current procurement preparedness status is required";
+      nextErrors.currentStatus =
+        "Current procurement preparedness status is required";
     }
 
     if (donorRequired && !formData.donorFinancierName.trim()) {
-      nextErrors.donorFinancierName = "Donor/Financier name is required for Other Donor";
+      nextErrors.donorFinancierName =
+        "Donor/Financier name is required for Other Donor";
     }
 
     return nextErrors;
@@ -206,16 +238,26 @@ export default function MasterProcurementPlanForm({ user }) {
     setSuccess("");
 
     try {
-      const response = await masterProcurementPlanApi.create(buildPayload(isDraft));
+      const response = await masterProcurementPlanApi.create(
+        buildPayload(isDraft),
+      );
       const saved = response.data?.data || response.data;
       const resultCode = saved?.item_code || saved?.itemCode || "(generated)";
-      const resultStatus = saved?.record_status || saved?.recordStatus || (isDraft ? "DRAFT" : "SUBMITTED");
+      const resultStatus =
+        saved?.record_status ||
+        saved?.recordStatus ||
+        (isDraft ? "DRAFT" : "SUBMITTED");
 
-      setSuccess(`Saved successfully. Item Code: ${resultCode} | Status: ${resultStatus}`);
+      setSuccess(
+        `Saved successfully. Item Code: ${resultCode} | Status: ${resultStatus}`,
+      );
       setFormData(createInitialFormData());
       setErrors({});
     } catch (apiError) {
-      setError(apiError.response?.data?.message || "Failed to save Master Procurement Plan entry");
+      setError(
+        apiError.response?.data?.message ||
+          "Failed to save Master Procurement Plan entry",
+      );
     } finally {
       setLoading(false);
     }
@@ -269,7 +311,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Select
                 label="Department / Faculty"
                 value={formData.department}
-                onChange={(event) => updateField("department", event.target.value)}
+                onChange={(event) =>
+                  updateField("department", event.target.value)
+                }
                 options={mapSelectOptions(DEPARTMENT_OPTIONS)}
                 error={errors.department}
                 className={fieldClass("department")}
@@ -279,7 +323,9 @@ export default function MasterProcurementPlanForm({ user }) {
               label="Sub-category"
               placeholder="Capital Works, Rehabilitation"
               value={formData.subCategory}
-              onChange={(event) => updateField("subCategory", event.target.value)}
+              onChange={(event) =>
+                updateField("subCategory", event.target.value)
+              }
             />
           </section>
 
@@ -290,7 +336,9 @@ export default function MasterProcurementPlanForm({ user }) {
               placeholder="Enter item description"
               rows={5}
               value={formData.description}
-              onChange={(event) => updateField("description", event.target.value)}
+              onChange={(event) =>
+                updateField("description", event.target.value)
+              }
               error={errors.description}
               className={fieldClass("description")}
             />
@@ -298,7 +346,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Select
                 label="Procurement Category"
                 value={formData.procurementCategory}
-                onChange={(event) => updateField("procurementCategory", event.target.value)}
+                onChange={(event) =>
+                  updateField("procurementCategory", event.target.value)
+                }
                 options={mapSelectOptions(PROCUREMENT_CATEGORY_OPTIONS)}
                 error={errors.procurementCategory}
                 className={fieldClass("procurementCategory")}
@@ -310,7 +360,9 @@ export default function MasterProcurementPlanForm({ user }) {
                   min="0"
                   step="0.001"
                   value={formData.estimatedCostMn}
-                  onChange={(event) => updateField("estimatedCostMn", event.target.value)}
+                  onChange={(event) =>
+                    updateField("estimatedCostMn", event.target.value)
+                  }
                   error={errors.estimatedCostMn}
                   className={fieldClass("estimatedCostMn")}
                 />
@@ -327,7 +379,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Select
                 label="Source of Financing"
                 value={formData.sourceOfFinancing}
-                onChange={(event) => updateField("sourceOfFinancing", event.target.value)}
+                onChange={(event) =>
+                  updateField("sourceOfFinancing", event.target.value)
+                }
                 options={mapSelectOptions(SOURCE_OF_FINANCING_OPTIONS)}
                 error={errors.sourceOfFinancing}
                 className={fieldClass("sourceOfFinancing")}
@@ -336,7 +390,9 @@ export default function MasterProcurementPlanForm({ user }) {
                 <Input
                   label="Donor / Financier Name"
                   value={formData.donorFinancierName}
-                  onChange={(event) => updateField("donorFinancierName", event.target.value)}
+                  onChange={(event) =>
+                    updateField("donorFinancierName", event.target.value)
+                  }
                   error={errors.donorFinancierName}
                   className={fieldClass("donorFinancierName")}
                 />
@@ -354,7 +410,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Select
                 label="Procurement Method"
                 value={formData.procurementMethod}
-                onChange={(event) => updateField("procurementMethod", event.target.value)}
+                onChange={(event) =>
+                  updateField("procurementMethod", event.target.value)
+                }
                 options={mapSelectOptions(PROCUREMENT_METHOD_OPTIONS)}
                 error={errors.procurementMethod}
                 className={fieldClass("procurementMethod")}
@@ -362,7 +420,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Select
                 label="Level of Authority"
                 value={formData.levelOfAuthority}
-                onChange={(event) => updateField("levelOfAuthority", event.target.value)}
+                onChange={(event) =>
+                  updateField("levelOfAuthority", event.target.value)
+                }
                 options={mapSelectOptions(LEVEL_OF_AUTHORITY_OPTIONS)}
                 error={errors.levelOfAuthority}
                 className={fieldClass("levelOfAuthority")}
@@ -374,7 +434,9 @@ export default function MasterProcurementPlanForm({ user }) {
             <h2>Section 4 - Priority & Status</h2>
             <div className="radio-group-wrap">
               <label className="group-label">Priority Status</label>
-              <div className={`radio-group ${errors.priorityStatus ? "group-invalid" : ""}`}>
+              <div
+                className={`radio-group ${errors.priorityStatus ? "group-invalid" : ""}`}
+              >
                 {PRIORITY_OPTIONS.map((priority) => (
                   <label key={priority.value} className="radio-option">
                     <input
@@ -382,19 +444,25 @@ export default function MasterProcurementPlanForm({ user }) {
                       name="priorityStatus"
                       value={priority.value}
                       checked={formData.priorityStatus === priority.value}
-                      onChange={(event) => updateField("priorityStatus", event.target.value)}
+                      onChange={(event) =>
+                        updateField("priorityStatus", event.target.value)
+                      }
                     />
                     {priority.label}
                   </label>
                 ))}
               </div>
-              {errors.priorityStatus && <span className="group-error">{errors.priorityStatus}</span>}
+              {errors.priorityStatus && (
+                <span className="group-error">{errors.priorityStatus}</span>
+              )}
             </div>
 
             <Select
               label="Current Procurement Preparedness Status"
               value={formData.currentStatus}
-              onChange={(event) => updateField("currentStatus", event.target.value)}
+              onChange={(event) =>
+                updateField("currentStatus", event.target.value)
+              }
               options={mapSelectOptions(CURRENT_STATUS_OPTIONS)}
               error={errors.currentStatus}
               className={fieldClass("currentStatus")}
@@ -411,7 +479,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.commencementYr1}
-                      onChange={(event) => updateField("commencementYr1", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("commencementYr1", event.target.checked)
+                      }
                     />
                     Yr 1 (2026)
                   </label>
@@ -419,7 +489,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.commencementYr2}
-                      onChange={(event) => updateField("commencementYr2", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("commencementYr2", event.target.checked)
+                      }
                     />
                     Yr 2 (2027)
                   </label>
@@ -427,7 +499,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.commencementYr3}
-                      onChange={(event) => updateField("commencementYr3", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("commencementYr3", event.target.checked)
+                      }
                     />
                     Yr 3 (2028)
                   </label>
@@ -440,7 +514,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.completionYr1}
-                      onChange={(event) => updateField("completionYr1", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("completionYr1", event.target.checked)
+                      }
                     />
                     Yr 1 (2026)
                   </label>
@@ -448,7 +524,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.completionYr2}
-                      onChange={(event) => updateField("completionYr2", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("completionYr2", event.target.checked)
+                      }
                     />
                     Yr 2 (2027)
                   </label>
@@ -456,7 +534,9 @@ export default function MasterProcurementPlanForm({ user }) {
                     <input
                       type="checkbox"
                       checked={formData.completionYr3}
-                      onChange={(event) => updateField("completionYr3", event.target.checked)}
+                      onChange={(event) =>
+                        updateField("completionYr3", event.target.checked)
+                      }
                     />
                     Yr 3 (2028)
                   </label>
@@ -468,7 +548,9 @@ export default function MasterProcurementPlanForm({ user }) {
               label="Contract Period"
               placeholder="6 months, 1 year"
               value={formData.contractPeriod}
-              onChange={(event) => updateField("contractPeriod", event.target.value)}
+              onChange={(event) =>
+                updateField("contractPeriod", event.target.value)
+              }
             />
           </section>
 
@@ -478,7 +560,9 @@ export default function MasterProcurementPlanForm({ user }) {
               <Input
                 label="Reference (MTBF / Corporate Plan)"
                 value={formData.reference}
-                onChange={(event) => updateField("reference", event.target.value)}
+                onChange={(event) =>
+                  updateField("reference", event.target.value)
+                }
               />
               <Input
                 label="Remark"
