@@ -12,6 +12,7 @@ import RequestSubmission from "./pages/RequestSubmission";
 import SpecificationReview from "./pages/SpecificationReview";
 import ApprovalDashboard from "./pages/ApprovalDashboard";
 import SupplyBranchDashboard from "./pages/SupplyBranchDashboard";
+import MasterProcurementPlanForm from "./pages/MasterProcurementPlanForm";
 import RequestDetails from "./pages/RequestDetails";
 import AdminUserRegistration from "./pages/AdminUserRegistration";
 import ChangePassword from "./pages/ChangePassword";
@@ -83,6 +84,10 @@ function App() {
             <Route
               path="/supply-branch"
               element={<SupplyBranchDashboard user={user} />}
+            />
+            <Route
+              path="/master-procurement-plan/new"
+              element={<MasterProcurementPlanForm user={user} />}
             />
             <Route
               path="/admin/users"

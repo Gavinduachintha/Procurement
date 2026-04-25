@@ -16,15 +16,18 @@ import "./Navigation.css";
 export default function Navigation({ user, onLogout }) {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const normalizedRole = String(user?.role || "")
+    .trim()
+    .toUpperCase();
 
   const getRoleBasedLinks = () => {
     const links = [
       { to: "/dashboard", label: "Dashboard", icon: Home, show: true },
     ];
 
-    console.log("🔗 Navigation.jsx: Building links for role:", user?.role);
+    console.log("🔗 Navigation.jsx: Building links for role:", normalizedRole);
 
-    if (user?.role === "REQUESTING_OFFICER") {
+    if (normalizedRole === "REQUESTING_OFFICER") {
       links.push({
         to: "/request/new",
         label: "Submit Request",
@@ -34,8 +37,8 @@ export default function Navigation({ user, onLogout }) {
     }
 
     if (
-      user?.role === "DIRECTOR_ICT" ||
-      user?.role === "MAINTENANCE_ENGINEER"
+      normalizedRole === "DIRECTOR_ICT" ||
+      normalizedRole === "MAINTENANCE_ENGINEER"
     ) {
       links.push({
         to: "/specification-review",
@@ -45,7 +48,7 @@ export default function Navigation({ user, onLogout }) {
       });
     }
 
-    if (["DEAN", "VICE_CHANCELLOR"].includes(user?.role)) {
+    if (["DEAN", "VICE_CHANCELLOR"].includes(normalizedRole)) {
       links.push({
         to: "/approvals",
         label: "Approvals",
@@ -62,17 +65,29 @@ export default function Navigation({ user, onLogout }) {
         "MINOR_COMMITTEE",
         "MAJOR_COMMITTEE",
         "FINANCE_OFFICER",
-      ].includes(user?.role)
+      ].includes(normalizedRole)
     ) {
       links.push({
-        to: "/supply-branch",
+        to:
+          normalizedRole === "SUPPLY_BRANCH"
+            ? "/master-procurement-plan/new"
+            : "/supply-branch",
         label: "Procurement",
         icon: Briefcase,
         show: true,
       });
     }
 
-    if (["ADMIN"].includes(user?.role)) {
+    if (normalizedRole === "SUPPLY_BRANCH") {
+      links.push({
+        to: "/supply-branch",
+        label: "Procurement Jobs",
+        icon: FileText,
+        show: true,
+      });
+    }
+
+    if (["ADMIN"].includes(normalizedRole)) {
       links.push({
         to: "/admin/users",
         label: "User Admin",

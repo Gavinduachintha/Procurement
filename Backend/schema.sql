@@ -249,3 +249,52 @@ CREATE TABLE IF NOT EXISTS payment_vouchers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (year, serial_number)
 );
+
+CREATE TABLE IF NOT EXISTS master_procurement_plans (
+  id BIGSERIAL PRIMARY KEY,
+  item_code TEXT NOT NULL UNIQUE,
+  serial_no INTEGER NOT NULL,
+  plan_year INTEGER NOT NULL,
+  department TEXT,
+  sub_category TEXT,
+  description TEXT,
+  procurement_category TEXT CHECK (procurement_category IN ('Works', 'Goods', 'Services', 'Consultancy')),
+  estimated_cost_mn NUMERIC(14,3) CHECK (estimated_cost_mn > 0),
+  source_of_financing TEXT CHECK (source_of_financing IN ('GOSL', 'ADB', 'World Bank', 'Own Revenue', 'Other Donor')),
+  donor_financier_name TEXT,
+  procurement_method TEXT CHECK (procurement_method IN (
+    'ICB',
+    'LIB',
+    'LNB',
+    'NCB',
+    'NCB & National Shopping',
+    'National Shopping',
+    'Direct Contracting'
+  )),
+  level_of_authority TEXT CHECK (level_of_authority IN ('HLPC', 'SHLPC', 'MPC', 'DPC Minor', 'DPC Major', 'RPC')),
+  priority_status TEXT CHECK (priority_status IN ('P', 'N', 'U')),
+  current_status TEXT CHECK (current_status IN (
+    'Planning for the year 2026',
+    'Approval for Procurement Plan 2026',
+    'Tender Documents Prepared',
+    'Advertised',
+    'Bids Evaluated',
+    'Contract Awarded',
+    'Implementation Ongoing',
+    'Completed'
+  )),
+  commencement_yr1 BOOLEAN NOT NULL DEFAULT TRUE,
+  commencement_yr2 BOOLEAN NOT NULL DEFAULT FALSE,
+  commencement_yr3 BOOLEAN NOT NULL DEFAULT FALSE,
+  completion_yr1 BOOLEAN NOT NULL DEFAULT TRUE,
+  completion_yr2 BOOLEAN NOT NULL DEFAULT FALSE,
+  completion_yr3 BOOLEAN NOT NULL DEFAULT FALSE,
+  contract_period TEXT,
+  reference_mtbf_corporate_plan TEXT,
+  remark TEXT,
+  record_status TEXT NOT NULL CHECK (record_status IN ('DRAFT', 'SUBMITTED')),
+  created_by BIGINT NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (plan_year, serial_no)
+);

@@ -63,3 +63,9 @@ export const supplierApi = {
   create: (data) => api.post("/suppliers", data),
   getByCategory: (category) => api.get(`/suppliers/category/${category}`),
 };
+
+export const masterProcurementPlanApi = {
+  create: (data) => api.post("/master-procurement-plans", data),
+  listMine: () => api.get("/master-procurement-plans/mine"),
+  metadata: () => api.get("/master-procurement-plans/metadata"),
+};

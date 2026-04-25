@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { pdf } from "@react-pdf/renderer";
 import api from "../api/client";
 import Card from "../components/Card";
@@ -313,6 +314,7 @@ const getMethodLabel = (methodCode) => {
 };
 
 export default function SupplyBranchDashboard({ user }) {
+  const navigate = useNavigate();
   const [approvedRequests, setApprovedRequests] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1452,6 +1454,14 @@ export default function SupplyBranchDashboard({ user }) {
         <Button onClick={loadData} disabled={actionLoading}>
           Refresh Data
         </Button>
+        {canStartJobs && (
+          <Button
+            variant="success"
+            onClick={() => navigate("/master-procurement-plan/new")}
+          >
+            Open Master Plan Form
+          </Button>
+        )}
       </div>
 
       {error && <Alert type="error">{error}</Alert>}
