@@ -208,7 +208,8 @@ export default function ApprovalDashboard({ user }) {
                       <td>{formatLkr(req.remaining_allocation_amount)}</td>
                       <td
                         className={
-                          Number(req.remaining_after_current_approval_amount) < 0
+                          Number(req.remaining_after_current_approval_amount) <
+                          0
                             ? "budget-negative"
                             : ""
                         }
@@ -294,99 +295,104 @@ export default function ApprovalDashboard({ user }) {
           <div className="final-decision-modal">
             {(() => {
               const isOverBudget =
-                Number(selectedRequest.remaining_after_current_approval_amount) <
-                0;
+                Number(
+                  selectedRequest.remaining_after_current_approval_amount,
+                ) < 0;
 
               return (
                 <>
-            <div className="request-summary">
-              <div>
-                <strong>Request:</strong>{" "}
-                {selectedRequest.request_id || selectedRequest.id}
-              </div>
-              <div>
-                <strong>Faculty / Unit:</strong> {selectedRequest.department}
-              </div>
-              <div>
-                <strong>Total Allocation:</strong>{" "}
-                {formatLkr(selectedRequest.total_allocation_amount)}
-              </div>
-              <div>
-                <strong>Remaining:</strong>{" "}
-                {formatLkr(selectedRequest.remaining_allocation_amount)}
-              </div>
-              <div>
-                <strong>Remaining After Approval:</strong>{" "}
-                <span
-                  className={
-                    Number(
-                      selectedRequest.remaining_after_current_approval_amount,
-                    ) < 0
-                      ? "budget-negative"
-                      : ""
-                  }
-                >
-                  {formatLkr(
-                    selectedRequest.remaining_after_current_approval_amount,
+                  <div className="request-summary">
+                    <div>
+                      <strong>Request:</strong>{" "}
+                      {selectedRequest.request_id || selectedRequest.id}
+                    </div>
+                    <div>
+                      <strong>Faculty / Unit:</strong>{" "}
+                      {selectedRequest.department}
+                    </div>
+                    <div>
+                      <strong>Total Allocation:</strong>{" "}
+                      {formatLkr(selectedRequest.total_allocation_amount)}
+                    </div>
+                    <div>
+                      <strong>Remaining:</strong>{" "}
+                      {formatLkr(selectedRequest.remaining_allocation_amount)}
+                    </div>
+                    <div>
+                      <strong>Remaining After Approval:</strong>{" "}
+                      <span
+                        className={
+                          Number(
+                            selectedRequest.remaining_after_current_approval_amount,
+                          ) < 0
+                            ? "budget-negative"
+                            : ""
+                        }
+                      >
+                        {formatLkr(
+                          selectedRequest.remaining_after_current_approval_amount,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isOverBudget && (
+                    <Alert type="error">
+                      This request exceeds the current allocation for this
+                      faculty/unit. Approve action is blocked until budget is
+                      available.
+                    </Alert>
                   )}
-                </span>
-              </div>
-            </div>
 
-            {isOverBudget && (
-              <Alert type="error">
-                This request exceeds the current allocation for this faculty/unit. Approve action is blocked until budget is available.
-              </Alert>
-            )}
+                  <div className="decision-form-row">
+                    <label htmlFor="final-decision-select">Decision</label>
+                    <select
+                      id="final-decision-select"
+                      className="final-decision-select"
+                      value={decision}
+                      onChange={(e) => setDecision(e.target.value)}
+                      disabled={decisionLoading}
+                    >
+                      <option value="APPROVED">Approve</option>
+                      <option value="REJECTED">Reject</option>
+                      <option value="CLARIFICATION_REQUESTED">
+                        Request Clarification
+                      </option>
+                    </select>
+                  </div>
 
-            <div className="decision-form-row">
-              <label htmlFor="final-decision-select">Decision</label>
-              <select
-                id="final-decision-select"
-                className="final-decision-select"
-                value={decision}
-                onChange={(e) => setDecision(e.target.value)}
-                disabled={decisionLoading}
-              >
-                <option value="APPROVED">Approve</option>
-                <option value="REJECTED">Reject</option>
-                <option value="CLARIFICATION_REQUESTED">
-                  Request Clarification
-                </option>
-              </select>
-            </div>
+                  <div className="decision-form-row">
+                    <label htmlFor="final-decision-comments">
+                      Comments to Requester
+                    </label>
+                    <textarea
+                      id="final-decision-comments"
+                      className="final-decision-comments"
+                      value={comments}
+                      onChange={(e) => setComments(e.target.value)}
+                      placeholder="Provide reason or clarification details"
+                      disabled={decisionLoading}
+                    />
+                  </div>
 
-            <div className="decision-form-row">
-              <label htmlFor="final-decision-comments">
-                Comments to Requester
-              </label>
-              <textarea
-                id="final-decision-comments"
-                className="final-decision-comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                placeholder="Provide reason or clarification details"
-                disabled={decisionLoading}
-              />
-            </div>
-
-            <div className="modal-actions">
-              <Button
-                variant="secondary"
-                onClick={() => setIsDecisionModalOpen(false)}
-                disabled={decisionLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={submitDecision}
-                disabled={
-                  decisionLoading || (decision === "APPROVED" && isOverBudget)
-                }
-              >
-                {decisionLoading ? "Submitting..." : "Submit Decision"}
-              </Button>
-            </div>
+                  <div className="modal-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsDecisionModalOpen(false)}
+                      disabled={decisionLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={submitDecision}
+                      disabled={
+                        decisionLoading ||
+                        (decision === "APPROVED" && isOverBudget)
+                      }
+                    >
+                      {decisionLoading ? "Submitting..." : "Submit Decision"}
+                    </Button>
+                  </div>
                 </>
               );
             })()}
