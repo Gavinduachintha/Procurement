@@ -1,5 +1,7 @@
 import { query } from "../config/db.js";
 
+const DEFAULT_DEPARTMENT_ALLOCATION = 6000000;
+
 export const approvalRepository = {
   async ensureApprovalSlots(purchaseRequestId, approvers) {
     for (const approver of approvers) {
@@ -122,14 +124,25 @@ export const approvalRepository = {
 
   async listPendingByApprover(approverId) {
     const { rows } = await query(
-      `SELECT pr.*
+      `SELECT
+         pr.*,
+         $2::numeric AS total_allocation_amount,
+         COALESCE(consumed.approved_amount, 0)::numeric AS approved_consumed_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric) AS remaining_allocation_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric - pr.estimated_cost::numeric) AS remaining_after_current_approval_amount
        FROM approvals a
        JOIN purchase_requests pr ON pr.id = a.purchase_request_id
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(SUM(pr2.estimated_cost), 0) AS approved_amount
+         FROM purchase_requests pr2
+         WHERE pr2.department = pr.department
+           AND pr2.status = 'APPROVED'
+       ) consumed ON TRUE
        WHERE a.approver_id = $1
          AND a.decision = 'PENDING'
          AND pr.status IN ('APPROVAL_PENDING', 'CLARIFICATION_REQUESTED')
        ORDER BY pr.updated_at DESC`,
-      [approverId],
+      [approverId, DEFAULT_DEPARTMENT_ALLOCATION],
     );
     console.log(
       "🔍 Backend: Querying pending approvals for approver:",
@@ -152,17 +165,52 @@ export const approvalRepository = {
          a.decision AS approval_decision,
          a.comments AS approval_comments,
          a.decided_at AS approval_decided_at,
-         a.approver_role
+         a.approver_role,
+         $2::numeric AS total_allocation_amount,
+         COALESCE(consumed.approved_amount, 0)::numeric AS approved_consumed_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric) AS remaining_allocation_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric - pr.estimated_cost::numeric) AS remaining_after_current_approval_amount
        FROM approvals a
        JOIN purchase_requests pr ON pr.id = a.purchase_request_id
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(SUM(pr2.estimated_cost), 0) AS approved_amount
+         FROM purchase_requests pr2
+         WHERE pr2.department = pr.department
+           AND pr2.status = 'APPROVED'
+       ) consumed ON TRUE
        WHERE a.approver_id = $1
        ORDER BY
          CASE WHEN a.decision = 'PENDING' THEN 0 ELSE 1 END,
          COALESCE(a.decided_at, pr.updated_at) DESC,
          pr.updated_at DESC`,
-      [approverId],
+      [approverId, DEFAULT_DEPARTMENT_ALLOCATION],
     );
 
     return rows;
+  },
+
+  async getBudgetSnapshotForRequest(purchaseRequestId) {
+    const { rows } = await query(
+      `SELECT
+         pr.id AS purchase_request_id,
+         pr.department,
+         pr.estimated_cost::numeric AS current_request_amount,
+         $2::numeric AS total_allocation_amount,
+         COALESCE(consumed.approved_amount, 0)::numeric AS approved_consumed_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric) AS remaining_allocation_amount,
+         ($2::numeric - COALESCE(consumed.approved_amount, 0)::numeric - pr.estimated_cost::numeric) AS remaining_after_current_approval_amount
+       FROM purchase_requests pr
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(SUM(pr2.estimated_cost), 0) AS approved_amount
+         FROM purchase_requests pr2
+         WHERE pr2.department = pr.department
+           AND pr2.status = 'APPROVED'
+       ) consumed ON TRUE
+       WHERE pr.id = $1
+       LIMIT 1`,
+      [purchaseRequestId, DEFAULT_DEPARTMENT_ALLOCATION],
+    );
+
+    return rows[0] || null;
   },
 };

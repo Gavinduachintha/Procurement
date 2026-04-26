@@ -75,6 +75,22 @@ export const approvalService = {
       );
     }
 
+    if (decision === "APPROVED") {
+      const budgetSnapshot =
+        await approvalRepository.getBudgetSnapshotForRequest(requestId);
+
+      if (!budgetSnapshot) {
+        throw new ApiError(404, "Unable to verify department allocation");
+      }
+
+      if (Number(budgetSnapshot.remaining_after_current_approval_amount) < 0) {
+        throw new ApiError(
+          400,
+          "Approval exceeds department allocation. Remaining budget is insufficient for this request.",
+        );
+      }
+    }
+
     const pendingForUser = await approvalRepository.listPendingByApprover(
       user.id,
     );

@@ -140,6 +140,20 @@ export default function ApprovalDashboard({ user }) {
     return date.toLocaleString();
   };
 
+  const formatLkr = (value) => {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) {
+      return "-";
+    }
+
+    return new Intl.NumberFormat("en-LK", {
+      style: "currency",
+      currency: "LKR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
   if (loading) return <div className="loading-state">Loading approvals...</div>;
 
   return (
@@ -176,6 +190,9 @@ export default function ApprovalDashboard({ user }) {
                     <th>Item</th>
                     <th>Department</th>
                     <th>Amount</th>
+                    <th>Total Allocation</th>
+                    <th>Remaining</th>
+                    <th>Remaining After Approval</th>
                     <th>Funding</th>
                     <th>Actions</th>
                   </tr>
@@ -186,7 +203,18 @@ export default function ApprovalDashboard({ user }) {
                       <td>{req.request_id || req.id}</td>
                       <td>{req.item_name}</td>
                       <td>{req.department}</td>
-                      <td>${req.estimated_cost}</td>
+                      <td>{formatLkr(req.estimated_cost)}</td>
+                      <td>{formatLkr(req.total_allocation_amount)}</td>
+                      <td>{formatLkr(req.remaining_allocation_amount)}</td>
+                      <td
+                        className={
+                          Number(req.remaining_after_current_approval_amount) < 0
+                            ? "budget-negative"
+                            : ""
+                        }
+                      >
+                        {formatLkr(req.remaining_after_current_approval_amount)}
+                      </td>
                       <td>{req.funding_source}</td>
                       <td>
                         <div className="action-buttons">
@@ -264,6 +292,13 @@ export default function ApprovalDashboard({ user }) {
       >
         {selectedRequest && (
           <div className="final-decision-modal">
+            {(() => {
+              const isOverBudget =
+                Number(selectedRequest.remaining_after_current_approval_amount) <
+                0;
+
+              return (
+                <>
             <div className="request-summary">
               <div>
                 <strong>Request:</strong>{" "}
@@ -272,7 +307,37 @@ export default function ApprovalDashboard({ user }) {
               <div>
                 <strong>Faculty / Unit:</strong> {selectedRequest.department}
               </div>
+              <div>
+                <strong>Total Allocation:</strong>{" "}
+                {formatLkr(selectedRequest.total_allocation_amount)}
+              </div>
+              <div>
+                <strong>Remaining:</strong>{" "}
+                {formatLkr(selectedRequest.remaining_allocation_amount)}
+              </div>
+              <div>
+                <strong>Remaining After Approval:</strong>{" "}
+                <span
+                  className={
+                    Number(
+                      selectedRequest.remaining_after_current_approval_amount,
+                    ) < 0
+                      ? "budget-negative"
+                      : ""
+                  }
+                >
+                  {formatLkr(
+                    selectedRequest.remaining_after_current_approval_amount,
+                  )}
+                </span>
+              </div>
             </div>
+
+            {isOverBudget && (
+              <Alert type="error">
+                This request exceeds the current allocation for this faculty/unit. Approve action is blocked until budget is available.
+              </Alert>
+            )}
 
             <div className="decision-form-row">
               <label htmlFor="final-decision-select">Decision</label>
@@ -313,10 +378,18 @@ export default function ApprovalDashboard({ user }) {
               >
                 Cancel
               </Button>
-              <Button onClick={submitDecision} disabled={decisionLoading}>
+              <Button
+                onClick={submitDecision}
+                disabled={
+                  decisionLoading || (decision === "APPROVED" && isOverBudget)
+                }
+              >
                 {decisionLoading ? "Submitting..." : "Submit Decision"}
               </Button>
             </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </Modal>
